@@ -3,6 +3,7 @@ package com.example.movieapp.mapper;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Series;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 
@@ -11,6 +12,8 @@ public interface SeriesMapper {
 
     SeriesDto toDto(Series series);
 
+    @Mapping(target = "banners", ignore = true)
+    @Mapping(target = "episodes", ignore = true)
     Series toEntity(SeriesDto dto);
 
     @Named("seriesDtoToEntityById")

@@ -36,7 +36,9 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/swagger-ui.html/**"
+                                "/swagger-ui.html/**",
+                                "/api/payment/payme",
+                                "/api/payment/click/**"
                         ).permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

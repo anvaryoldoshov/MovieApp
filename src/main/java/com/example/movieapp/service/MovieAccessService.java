@@ -174,6 +174,25 @@ public class MovieAccessService {
     }
 
 
+    @Transactional
+    public void grantPaidAccess(Long userId, Long seriesId, int accessDays) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User topilmadi: " + userId));
+        Series series = seriesRepo.findById(seriesId)
+                .orElseThrow(() -> new RuntimeException("Series topilmadi: " + seriesId));
+
+        MovieAccess access = movieAccessRepository
+                .findByUser_IdAndMovie_IdAndPaidIsTrue(userId, seriesId)
+                .orElseGet(MovieAccess::new);
+
+        access.setUser(user);
+        access.setMovie(series);
+        access.setPaid(true);
+        access.setAccessEndDate(LocalDate.now().plusDays(accessDays));
+        movieAccessRepository.save(access);
+        log.info("Pullik kirish berildi: user={}, series={}, kunlar={}", userId, seriesId, accessDays);
+    }
+
     public boolean canUserWatchMovie(Long userId, Long serialId) {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> {
