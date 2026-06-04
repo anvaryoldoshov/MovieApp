@@ -1,7 +1,5 @@
 package com.example.movieapp.controller;
 
-import com.example.movieapp.dto.EpisodeDto;
-import com.example.movieapp.dto.GetDetailsResponse;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
@@ -18,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

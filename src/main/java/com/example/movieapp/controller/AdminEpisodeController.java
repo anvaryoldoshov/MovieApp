@@ -1,7 +1,6 @@
 package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
-import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Episode;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.service.EpisodeService;
@@ -10,13 +9,10 @@ import com.example.movieapp.service.SeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/series")

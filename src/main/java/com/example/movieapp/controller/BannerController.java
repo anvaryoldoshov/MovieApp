@@ -4,7 +4,6 @@ import com.example.movieapp.dto.BannerDto;
 import com.example.movieapp.dto.BannerResponseDto;
 import com.example.movieapp.entities.Banner;
 import com.example.movieapp.repository.BannerRepo;
-import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.service.BannerService;
 import com.example.movieapp.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
