@@ -1,19 +1,25 @@
 package com.example.movieapp.security;
 
 import javax.crypto.SecretKey;
+import java.util.Base64;
 import java.util.Date;
 
 import com.example.movieapp.entities.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class JwtTokenProvider {
 
-    private final SecretKey secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final SecretKey secretKey;
 
     private final long accessTokenValidity = 30L * 24 * 3600_000;
+
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
+        this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
+    }
 
     public String generateToken(String email,long validityMillis) {
         Date now = new Date();
