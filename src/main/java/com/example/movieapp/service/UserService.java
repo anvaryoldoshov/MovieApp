@@ -2,6 +2,7 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.UserDto;
 import com.example.movieapp.entities.User;
+import com.example.movieapp.enums.Role;
 import com.example.movieapp.mapper.UserMapper;
 import com.example.movieapp.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
@@ -74,5 +75,13 @@ public class UserService {
         User user = userRepo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         UserDto dto = userMapper.toDto(user);
         return ResponseEntity.ok().body(dto);
+    }
+
+    public ResponseEntity<?> makeAdmin(Long userId) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User topilmadi"));
+        user.setRole(Role.ADMIN);
+        userRepo.save(user);
+        return ResponseEntity.ok("Foydalanuvchi admin qilindi");
     }
 }

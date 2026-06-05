@@ -3,6 +3,7 @@ package com.example.movieapp.service;
 import com.example.movieapp.dto.AuthResponse;
 import com.example.movieapp.dto.SignInRequest;
 import com.example.movieapp.dto.SignUpRequest;
+import com.example.movieapp.enums.Role;
 import com.example.movieapp.entities.RefreshToken;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
@@ -60,7 +61,7 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getRole());
 
         Optional<RefreshToken> existingToken = refreshTokenRepository.findByUser(user);
 
@@ -113,11 +114,12 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .subscription(false)
                 .userId(userId)
+                .role(Role.USER)
                 .build();
 
         userRepo.save(user);
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getRole());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
         userDeviceCreateOrUpdate(request.getDeviceId(), user, accessToken);

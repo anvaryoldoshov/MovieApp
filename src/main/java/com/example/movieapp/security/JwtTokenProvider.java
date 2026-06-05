@@ -5,6 +5,7 @@ import java.util.Base64;
 import java.util.Date;
 
 import com.example.movieapp.entities.User;
+import com.example.movieapp.enums.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,20 +22,38 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
     }
 
-    public String generateToken(String email,long validityMillis) {
+    public String generateToken(String email, long validityMillis, Role role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityMillis);
 
         return Jwts.builder()
                 .setSubject(email)
+                .claim("role", role.name())
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(secretKey)
                 .compact();
     }
 
+    public String generateToken(String email, long validityMillis) {
+        return generateToken(email, validityMillis, Role.USER);
+    }
+
     public String generateAccessToken(String email) {
-        return generateToken(email, accessTokenValidity);
+        return generateToken(email, accessTokenValidity, Role.USER);
+    }
+
+    public String generateAccessToken(String email, Role role) {
+        return generateToken(email, accessTokenValidity, role);
+    }
+
+    public String getRoleFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("role", String.class);
     }
 
     public String getEmailFromToken(String token) {

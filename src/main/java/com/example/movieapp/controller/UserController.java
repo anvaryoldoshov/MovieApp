@@ -29,4 +29,9 @@ public class UserController {
         return userService.updateUser(id, userDto);
     }
 
+    @PutMapping("/{id}/make-admin")
+    public ResponseEntity<?> makeAdmin(@PathVariable Long id) {
+        return userService.makeAdmin(id);
+    }
+
 }

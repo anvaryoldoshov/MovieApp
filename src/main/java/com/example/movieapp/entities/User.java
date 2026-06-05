@@ -1,5 +1,6 @@
 package com.example.movieapp.entities;
 
+import com.example.movieapp.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
@@ -41,5 +42,9 @@ public class User {
 
     @Column(unique = true)
     private Long userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.USER;
 }
 

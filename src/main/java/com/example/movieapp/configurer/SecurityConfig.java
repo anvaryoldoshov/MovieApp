@@ -26,9 +26,6 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**",
-                                "/public/**",
-                                "/uploads/**").permitAll()
                         .requestMatchers(
                                 "/auth/**",
                                 "/public/**",
@@ -39,6 +36,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html/**",
                                 "/api/payment/pixy/callback"
                         ).permitAll()
+                        .requestMatchers("/admin/**", "/users/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
