@@ -120,9 +120,12 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
+        userDeviceCreateOrUpdate(request.getDeviceId(), user, accessToken);
+
         AuthResponse response = userMapper.toAuthResponse(user);
         response.setToken(accessToken);
         response.setRefreshToken(refreshToken);
+        response.setDeviceId(request.getDeviceId());
 
         return response;
     }
