@@ -54,7 +54,7 @@ public class JwtFilter extends OncePerRequestFilter {
                         .orElseThrow(() -> new AuthenticationServiceException("Foydalanuvchi topilmadi"));
 
                 UserDevice device = userDeviceRepository.findByUserAndDeviceId(user, deviceId)
-                        .orElseThrow(() -> new RuntimeException("Ushbu foydalanuvchiga device biriktirilmagan"));
+                        .orElseThrow(() -> new AuthenticationServiceException("Ushbu foydalanuvchiga device biriktirilmagan"));
 
                 if (!device.getToken().equals(token)) {
                     logger.error("Token mos emas ,{} ,{}",device.getToken(),token);
