@@ -9,6 +9,7 @@ import com.example.movieapp.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
@@ -31,6 +32,7 @@ public class BannerController {
         return ResponseEntity.ok(banners);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{seriesId}")
     public ResponseEntity<?> createBanner(@RequestParam("seriesId") Long seriesId,
                                           @RequestParam("image") MultipartFile image) {
@@ -44,6 +46,7 @@ public class BannerController {
         }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/{seriesId}")
     public ResponseEntity<?> updateBanner(@PathVariable Long id,
                                           @RequestParam("seriesId") Long seriesId,
@@ -68,6 +71,7 @@ public class BannerController {
         return bannerService.getAllBannersDto();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/{seriesId}")
     public ResponseEntity<?> deleteBanner(@PathVariable Long id, @PathVariable Long seriesId) {
         try {

@@ -167,7 +167,7 @@ public class AuthService {
                     return userRepo.save(newUser);
                 });
 
-        String accessToken = jwtService.generateAccessToken(email);
+        String accessToken = jwtService.generateAccessToken(email, user.getRole() != null ? user.getRole() : Role.USER);
         String refreshToken = refreshTokenService.createRefreshToken(email).getToken();
 
 

@@ -50,10 +50,10 @@ public class AuthController {
             refreshTokenService.validateRefreshToken(request.getRefreshToken());
             String email = refreshTokenService.getEmailFromToken(request.getRefreshToken());
 
-            String newAccessToken = jwtTokenProvider.generateAccessToken(email);
+            User user = userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+            String newAccessToken = jwtTokenProvider.generateAccessToken(email, user.getRole());
             String newRefreshToken = refreshTokenService.createRefreshToken(email).getToken();
 
-            User user = userRepo.findByEmail(email).orElseThrow();
             Optional<UserDevice> userDeviceOpt = userDeviceRepository.findByUserId(user.getId());
 
             if (userDeviceOpt.isPresent()) {

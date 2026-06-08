@@ -78,7 +78,7 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(User user) {
-        return generateAccessToken(user.getEmail());
+        return generateAccessToken(user.getEmail(), user.getRole());
     }
 
 }

@@ -8,10 +8,12 @@ import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.service.MovieAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("api/access")
 @RequiredArgsConstructor
