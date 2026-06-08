@@ -1,5 +1,6 @@
 package com.example.movieapp.dto;
 
+import com.example.movieapp.enums.Role;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -13,4 +14,5 @@ public class UserDto {
     private LocalDate subscriptionStartDate;
     private LocalDate subscriptionEndDate;
     private Long userId;
+    private Role role;
 }
