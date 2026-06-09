@@ -2,19 +2,15 @@ package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.BannerDto;
 import com.example.movieapp.dto.BannerResponseDto;
-import com.example.movieapp.entities.Banner;
-import com.example.movieapp.repository.BannerRepo;
 import com.example.movieapp.service.BannerService;
 import com.example.movieapp.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/banners")
 @RequiredArgsConstructor
@@ -22,15 +18,6 @@ public class BannerController {
 
     private final BannerService bannerService;
     private final FileStorageService fileStorageService;
-    private final BannerRepo bannerRepo;
-
-    @GetMapping("/all")
-    public ResponseEntity<?> getAllBanners() {
-        List<Banner> banners = bannerRepo.findAll();
-        log.debug("Banner count: {}", banners.size());
-        banners.forEach(b -> System.out.println("ID: " + b.getId() + ", Image: " + b.getImage()));
-        return ResponseEntity.ok(banners);
-    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{seriesId}")
