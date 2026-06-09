@@ -7,6 +7,9 @@ import com.example.movieapp.enums.Role;
 import com.example.movieapp.entities.RefreshToken;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
+import com.example.movieapp.exception.InvalidCredentialsException;
+import com.example.movieapp.exception.UserAlreadyExistsException;
+import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.mapper.UserMapper;
 import com.example.movieapp.repository.RefreshTokenRepository;
 import com.example.movieapp.repository.UserDeviceRepository;
@@ -51,14 +54,14 @@ public class AuthService {
 
     public AuthResponse signIn(SignInRequest request) {
         User user = userRepo.findByEmail(request.getEmail())
-                .orElseThrow( () ->  {
-                    log.error("User not Found");
-                    return new RuntimeException("User not found");
+                .orElseThrow(() -> {
+                    log.error("User not found: {}", request.getEmail());
+                    return new UserNotFoundException();
                 });
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.debug("Invalid Password");
-            throw new RuntimeException("Invalid credentials");
+            log.debug("Invalid password for: {}", request.getEmail());
+            throw new InvalidCredentialsException();
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getRole());
@@ -104,7 +107,7 @@ public class AuthService {
 
     public AuthResponse signUp(SignUpRequest request) {
         if (userRepo.findByEmail(request.getEmail()).isPresent())
-            throw new RuntimeException("User already exists");
+            throw new UserAlreadyExistsException();
 
         Long userId = generateUniqueUserId();
 
@@ -133,7 +136,8 @@ public class AuthService {
     }
 
     public void logout(String email) {
-        User user = userRepo.findByEmail(email).orElseThrow();
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
         refreshTokenService.deleteByUser(user);
     }
 

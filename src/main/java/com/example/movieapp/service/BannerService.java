@@ -8,6 +8,8 @@ import com.example.movieapp.mapper.BannerMapper;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.repository.BannerRepo;
 import com.example.movieapp.repository.SeriesRepo;
+import com.example.movieapp.exception.BannerNotFoundException;
+import com.example.movieapp.exception.SeriesNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -39,7 +41,7 @@ public class BannerService {
     public ResponseEntity<?> createBanner(BannerDto bannerDto, Long serisId) {
         Optional<Series> byId = seriesRepo.findById(serisId);
         if (!byId.isPresent())
-            throw new RuntimeException("Series not found");
+            throw new SeriesNotFoundException();
 
         bannerDto.setMovie(seriesMapper.toDto(byId.get()));
         bannerRepo.save(bannerMapper.toBanner(bannerDto));
@@ -52,7 +54,7 @@ public class BannerService {
                 .orElseThrow(() -> new RuntimeException("Series not found"));
 
         Banner banner = bannerRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Banner not found"));
+                .orElseThrow(BannerNotFoundException::new);
 
         banner.setSeries(series);
         banner.setImage(bannerDto.getImage());
@@ -64,7 +66,7 @@ public class BannerService {
     public ResponseEntity<?> deleteBanner(Long id, Long serisId) {
         Optional<Series> byId = seriesRepo.findById(serisId);
         if (byId.isEmpty())
-            throw new RuntimeException("Series not found");
+            throw new SeriesNotFoundException();
         bannerRepo.deleteById(id);
         return ResponseEntity.ok().build();
     }

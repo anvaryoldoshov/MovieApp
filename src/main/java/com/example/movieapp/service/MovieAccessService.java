@@ -6,6 +6,10 @@ import com.example.movieapp.entities.User;
 import com.example.movieapp.repository.MovieAccessRepository;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.repository.UserRepo;
+import com.example.movieapp.exception.MovieAccessAlreadyExistsException;
+import com.example.movieapp.exception.MovieAccessNotFoundException;
+import com.example.movieapp.exception.SeriesNotFoundException;
+import com.example.movieapp.exception.UserNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,13 +36,13 @@ public class MovieAccessService {
 
     public MovieAccess giveAccess(Long userId, Long seriesId, boolean paid) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
         Series series = seriesRepository.findById(seriesId)
-                .orElseThrow(() -> new RuntimeException("Series not found"));
+                .orElseThrow(SeriesNotFoundException::new);
 
         if (movieAccessRepository.existsByUserIdAndMovieId(userId, seriesId)) {
             log.error("Movie access already exists for user {} and series {}", userId, seriesId);
-            throw new RuntimeException("User is already watching movie access");
+            throw new MovieAccessAlreadyExistsException();
         }
         MovieAccess access = new MovieAccess();
         access.setUser(user);
@@ -70,7 +74,7 @@ public class MovieAccessService {
                 .findByUserIdAndMovieIdAndPaidTrue(userId, movieId);
 
         if (accessOpt.isEmpty()) {
-            throw new RuntimeException("User does not have movie access");
+            throw new MovieAccessNotFoundException();
         }
 
         log.debug("Movie access deleted: User {} for Movie {}", accessOpt.get().getUser().getUsername(), accessOpt.get().getMovie().getTitle());
@@ -96,7 +100,7 @@ public class MovieAccessService {
             Integer subscriptionDays
     ) {
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User topilmadi: " + userId));
+                .orElseThrow(UserNotFoundException::new);
 
         user.setSubscription(hasSubscription);
         log.info("Updating access for user {}. Subscription: {}, Days: {}", userId, hasSubscription, subscriptionDays);
@@ -142,7 +146,7 @@ public class MovieAccessService {
                 if (days == null || days <= 0) continue;
 
                 Series series = seriesRepo.findById(seriesId)
-                        .orElseThrow(() -> new RuntimeException("Series topilmadi: " + seriesId));
+                        .orElseThrow(SeriesNotFoundException::new);
 
                 Optional<MovieAccess> existingAccess = existingPaidAccesses.stream()
                         .filter(ma -> ma.getMovie().getId().equals(seriesId))
@@ -177,9 +181,9 @@ public class MovieAccessService {
     @Transactional
     public void grantPaidAccess(Long userId, Long seriesId, int accessDays) {
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User topilmadi: " + userId));
+                .orElseThrow(UserNotFoundException::new);
         Series series = seriesRepo.findById(seriesId)
-                .orElseThrow(() -> new RuntimeException("Series topilmadi: " + seriesId));
+                .orElseThrow(SeriesNotFoundException::new);
 
         MovieAccess access = movieAccessRepository
                 .findByUser_IdAndMovie_IdAndPaidIsTrue(userId, seriesId)
@@ -197,7 +201,7 @@ public class MovieAccessService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> {
                     log.warn("User not found for ID: {}", userId);
-                    return new RuntimeException("User not found");
+                    return new UserNotFoundException();
                 });
 
         // 1. Obuna tekshiruvi

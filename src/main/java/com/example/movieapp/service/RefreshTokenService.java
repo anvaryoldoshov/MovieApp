@@ -2,6 +2,8 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.entities.RefreshToken;
 import com.example.movieapp.entities.User;
+import com.example.movieapp.exception.SessionExpiredException;
+import com.example.movieapp.exception.SessionNotFoundException;
 import com.example.movieapp.repository.RefreshTokenRepository;
 import com.example.movieapp.repository.UserRepo;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,10 +39,10 @@ public class RefreshTokenService {
 
     public void validateRefreshToken(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+                .orElseThrow(SessionNotFoundException::new);
 
-    if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
-            throw new RuntimeException("Refresh token expired");
+        if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
+            throw new SessionExpiredException();
         }
 
     }
@@ -52,7 +54,7 @@ public class RefreshTokenService {
 
     public String getEmailFromToken(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(SessionNotFoundException::new);
         return refreshToken.getUser().getEmail();
     }
 }

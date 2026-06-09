@@ -6,6 +6,7 @@ import com.example.movieapp.entities.Series;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeriesRepo;
+import com.example.movieapp.exception.EpisodeNotBelongToSeriesException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class EpisodeService {
                 .orElseThrow(() -> new RuntimeException("Episode not found"));
 
         if (!episode.getSeries().getId().equals(seriesId)) {
-            throw new RuntimeException("Episode does not belong to this series");
+            throw new EpisodeNotBelongToSeriesException();
         }
 
         return episodeMapper.toEpisodeDto(episode);
