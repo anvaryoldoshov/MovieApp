@@ -23,6 +23,7 @@ public enum ErrorCode {
     // Movie Access (5000-5099)
     MOVIE_ACCESS_ALREADY_EXISTS(5001, "Foydalanuvchi bu serialga allaqachon kirish huquqiga ega"),
     MOVIE_ACCESS_NOT_FOUND(5002, "Foydalanuvchida bu serialga kirish huquqi mavjud emas"),
+    NO_ACCESS_TO_SERIES(5003, "Siz bu serialni ko'ra olmaysiz. Obuna yoki kirish huquqi mavjud emas"),
 
     // Payment (6000-6099)
     PAYMENT_INVALID_REQUEST(6001, "To'lov ma'lumotlari noto'g'ri: subscriptionDays yoki seriesId ko'rsatilishi kerak"),

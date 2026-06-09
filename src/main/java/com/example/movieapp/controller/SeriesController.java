@@ -10,8 +10,9 @@ import com.example.movieapp.service.EpisodeService;
 import com.example.movieapp.service.FileStorageService;
 import com.example.movieapp.service.MovieAccessService;
 import com.example.movieapp.service.SeriesService;
+import com.example.movieapp.exception.NoAccessToSeriesException;
+import com.example.movieapp.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -43,16 +44,11 @@ public class SeriesController {
     public ResponseEntity<?> getEpisode(@PathVariable Long serialId, @PathVariable Long episodeId, Authentication authentication) {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        if (!canWatch) {
-            // notificationService.sendNotification(user.getUserId(), "Serial ko'rish huquqi yo'q", "Sizning obunangiz tugagan yoki bu serial uchun ruxsat berilmagan.");
-
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Siz bu serialni ko'ra olmaysiz. Obuna yoki individual kirish huquqi tugagan/berilmagan."));
-        }
+        if (!canWatch) throw new NoAccessToSeriesException();
 
         return ResponseEntity.ok(episodeService.getEpisodeById(serialId, episodeId));
 //        return ResponseEntity.ok("Episode content will be here (After successful access check)");
@@ -62,14 +58,12 @@ public class SeriesController {
     public ResponseEntity<?> getDetails(@PathVariable Long serialId, Authentication authentication) {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        if (!canWatch) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Siz bu serial ni ko'ra olmaysiz");
-        }
+        if (!canWatch) throw new NoAccessToSeriesException();
+
         return ResponseEntity.ok(seriesService.getDetails(serialId));
     }
 
