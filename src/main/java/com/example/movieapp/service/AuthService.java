@@ -167,6 +167,7 @@ public class AuthService {
                             .username(name)
                             .subscription(false)
                             .userId(generateUniqueUserId())
+                            .role(Role.USER)
                             .build();
                     return userRepo.save(newUser);
                 });
