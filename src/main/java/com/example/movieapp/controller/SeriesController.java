@@ -72,12 +72,16 @@ public class SeriesController {
     @PostMapping("/add")
     public ResponseEntity<?> createSeries(@RequestParam("title") String title,
                                           @RequestParam("status") String status,
+                                          @RequestParam(value = "monthlyPrice", required = false) Long monthlyPrice,
+                                          @RequestParam(value = "quarterlyPrice", required = false) Long quarterlyPrice,
                                           @RequestParam("image") MultipartFile image) {
         String imagePath = fileStorageService.saveImage("series", image);
 
         SeriesDto dto = new SeriesDto();
         dto.setTitle(title);
         dto.setStatus(status);
+        dto.setMonthlyPrice(monthlyPrice);
+        dto.setQuarterlyPrice(quarterlyPrice);
         dto.setImagePath(imagePath);
 
         return seriesService.saveSeries(dto);
@@ -88,6 +92,8 @@ public class SeriesController {
     public ResponseEntity<?> updateSeries(@PathVariable Long id,
                                           @RequestParam("title") String title,
                                           @RequestParam("status") String status,
+                                          @RequestParam(value = "monthlyPrice", required = false) Long monthlyPrice,
+                                          @RequestParam(value = "quarterlyPrice", required = false) Long quarterlyPrice,
                                           @RequestParam(value = "image", required = false) MultipartFile image) {
 
         Optional<Series> existing = seriesRepo.findById(id);
@@ -96,12 +102,13 @@ public class SeriesController {
         SeriesDto dto = new SeriesDto();
         dto.setTitle(title);
         dto.setStatus(status);
+        dto.setMonthlyPrice(monthlyPrice);
+        dto.setQuarterlyPrice(quarterlyPrice);
 
         if (image != null && !image.isEmpty()) {
             String imagePath = fileStorageService.saveImage("series", image);
             dto.setImagePath(imagePath);
         } else {
-
             dto.setImagePath(existing.get().getImagePath());
         }
 

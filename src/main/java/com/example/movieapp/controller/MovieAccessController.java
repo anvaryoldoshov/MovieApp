@@ -3,7 +3,6 @@ package com.example.movieapp.controller;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.dto.UserAccessUpdateRequest;
 import com.example.movieapp.entities.MovieAccess;
-import com.example.movieapp.entities.Series;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.service.MovieAccessService;
 import lombok.RequiredArgsConstructor;
@@ -39,9 +38,12 @@ public class MovieAccessController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Series>> getUserAccessedSeries(@PathVariable Long userId) {
-        List<Series> seriesIds = movieAccessService.getUserAccessedSeries(userId);
-        return ResponseEntity.ok(seriesIds);
+    public ResponseEntity<List<SeriesDto>> getUserAccessedSeries(@PathVariable Long userId) {
+        List<SeriesDto> series = movieAccessService.getUserAccessedSeries(userId)
+                .stream()
+                .map(seriesMapper::toDto)
+                .toList();
+        return ResponseEntity.ok(series);
     }
 
     @DeleteMapping()

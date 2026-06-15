@@ -17,4 +17,9 @@ public class SeriesDto {
 
     private String imagePath;
 
+    private boolean hasAccess;
+
+    private Long monthlyPrice;   // null bo'lsa 1 oylik tarif yo'q
+    private Long quarterlyPrice; // null bo'lsa 3 oylik tarif yo'q
+
 }

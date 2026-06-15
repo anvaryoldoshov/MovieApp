@@ -2,16 +2,10 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.AuthResponse;
 import com.example.movieapp.dto.SignInRequest;
-import com.example.movieapp.dto.SignUpRequest;
 import com.example.movieapp.enums.Role;
-import com.example.movieapp.entities.RefreshToken;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
-import com.example.movieapp.exception.InvalidCredentialsException;
-import com.example.movieapp.exception.UserAlreadyExistsException;
 import com.example.movieapp.exception.UserNotFoundException;
-import com.example.movieapp.mapper.UserMapper;
-import com.example.movieapp.repository.RefreshTokenRepository;
 import com.example.movieapp.repository.UserDeviceRepository;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.security.JwtTokenProvider;
@@ -38,52 +32,16 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final UserRepo userRepo;
-    private final UserMapper userMapper;
-    private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final UserDeviceRepository userDeviceRepository;
     private final JwtTokenProvider jwtService;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Value("${mobile.google.client.Id}")
     private String mobileGoogleId;
 
     @Value("${web.google.client.Id}")
     private String webGoogleId;
-
-    public AuthResponse signIn(SignInRequest request) {
-        User user = userRepo.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", request.getEmail());
-                    return new UserNotFoundException();
-                });
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.debug("Invalid password for: {}", request.getEmail());
-            throw new InvalidCredentialsException();
-        }
-
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getRole());
-
-        Optional<RefreshToken> existingToken = refreshTokenRepository.findByUser(user);
-
-        String refreshToken;
-        if (existingToken.isPresent() && existingToken.get().getExpiryDate().isAfter(Instant.now())) {
-            refreshToken = existingToken.get().getToken();
-        } else {
-            refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
-        }
-
-        userDeviceCreateOrUpdate(request.getDeviceId(), user, accessToken);
-
-        AuthResponse response = userMapper.toAuthResponse(user);
-        response.setDeviceId(request.getDeviceId());
-        response.setToken(accessToken);
-        response.setRefreshToken(refreshToken);
-
-        return response;
-    }
 
     private void userDeviceCreateOrUpdate(String deviceId, User user, String accessToken) {
         Optional<UserDevice> existingDevice = userDeviceRepository.findByUserId(user.getId());
@@ -105,34 +63,33 @@ public class AuthService {
     }
 
 
-    public AuthResponse signUp(SignUpRequest request) {
-        if (userRepo.findByEmail(request.getEmail()).isPresent())
-            throw new UserAlreadyExistsException();
+    public ResponseEntity<AuthResponse> signIn(SignInRequest request) {
+        User user = userRepo.findByEmail(request.getEmail())
+                .orElse(null);
 
-        Long userId = generateUniqueUserId();
+        if (user == null || user.getPassword() == null
+                || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-        User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .subscription(false)
-                .userId(userId)
-                .role(Role.USER)
-                .build();
-
-        userRepo.save(user);
-
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getEmail(),
+                user.getRole() != null ? user.getRole() : Role.USER);
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        userDeviceCreateOrUpdate(request.getDeviceId(), user, accessToken);
+        String deviceId = request.getDeviceId() != null ? request.getDeviceId() : "admin-web";
+        userDeviceCreateOrUpdate(deviceId, user, accessToken);
 
-        AuthResponse response = userMapper.toAuthResponse(user);
+        AuthResponse response = new AuthResponse();
+        response.setId(user.getId());
+        response.setUsername(user.getUsername());
+        response.setEmail(user.getEmail());
+        response.setUserId(user.getUserId());
+        response.setRole(user.getRole());
         response.setToken(accessToken);
         response.setRefreshToken(refreshToken);
-        response.setDeviceId(request.getDeviceId());
+        response.setDeviceId(deviceId);
 
-        return response;
+        return ResponseEntity.ok(response);
     }
 
     public void logout(String email) {
@@ -182,8 +139,8 @@ public class AuthService {
         response.setId(user.getId());
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
-        response.setSubscription(user.getSubscription());
         response.setUserId(user.getUserId());
+        response.setRole(user.getRole());
         response.setToken(accessToken);
         response.setRefreshToken(refreshToken);
         response.setDeviceId(deviceId);

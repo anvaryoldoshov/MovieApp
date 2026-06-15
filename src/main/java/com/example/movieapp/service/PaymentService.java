@@ -17,7 +17,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.Optional;
 
 @Slf4j
@@ -42,44 +41,24 @@ public class PaymentService {
         this.pixyService = pixyService;
     }
 
-    @Value("${payment.subscription.price.monthly:50000}")
-    private long monthlyPriceSom;
-
-    @Value("${payment.subscription.price.quarterly:130000}")
-    private long quarterlyPriceSom;
-
-    @Value("${payment.subscription.price.yearly:500000}")
-    private long yearlyPriceSom;
-
-    @Value("${payment.individual.series.price:10000}")
-    private long individualPriceSom;
-
-    @Value("${payment.individual.series.access.days:30}")
-    private int individualAccessDays;
-
     @Transactional
-    public CreatePaymentOrderResponse createOrder(CreatePaymentOrderRequest request) {
-        User user = userRepo.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User topilmadi: " + request.getUserId()));
-
-        long amountSom;
-        PaymentType type;
-        Series series = null;
-        Integer subscriptionDays = null;
-
-        if (request.getSeriesId() != null) {
-            series = seriesRepo.findById(request.getSeriesId())
-                    .orElseThrow(() -> new RuntimeException("Series topilmadi: " + request.getSeriesId()));
-            amountSom = individualPriceSom;
-            type = PaymentType.INDIVIDUAL_SERIES;
-        } else if (request.getSubscriptionDays() != null) {
-            subscriptionDays = request.getSubscriptionDays();
-            amountSom = calculateSubscriptionPrice(subscriptionDays);
-            type = PaymentType.SUBSCRIPTION;
-        } else {
-            throw new RuntimeException("subscriptionDays yoki seriesId ko'rsatilishi kerak");
+    public CreatePaymentOrderResponse createOrder(CreatePaymentOrderRequest request, Long userId) {
+        if (request.getSeriesId() == null) {
+            throw new RuntimeException("seriesId ko'rsatilishi kerak");
         }
 
+        int durationMonths = resolveDuration(request.getDurationMonths());
+        int accessDays = durationMonths * 30;
+
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User topilmadi: " + userId));
+
+        Series series = seriesRepo.findById(request.getSeriesId())
+                .orElseThrow(() -> new RuntimeException("Serial topilmadi: " + request.getSeriesId()));
+
+        long baseAmountSom = resolvePrice(series, durationMonths);
+        long commissionSom = baseAmountSom * 4 / 100;
+        long amountSom = baseAmountSom + commissionSom;
         long amountTiyin = amountSom * 100;
 
         Payment payment = Payment.builder()
@@ -88,20 +67,24 @@ public class PaymentService {
                 .amount(amountTiyin)
                 .status(PaymentStatus.PENDING)
                 .provider(PaymentProvider.PIXY)
-                .paymentType(type)
-                .subscriptionDays(subscriptionDays)
+                .paymentType(PaymentType.INDIVIDUAL_SERIES)
+                .subscriptionDays(accessDays)
                 .build();
 
         payment = paymentRepository.save(payment);
-        log.info("Payment order yaratildi: id={}, user={}, amount={} tiyin",
-                payment.getId(), user.getId(), amountTiyin);
+        log.info("Payment order yaratildi: id={}, user={}, series={}, davomiylik={}oy, amount={} tiyin",
+                payment.getId(), user.getId(), series.getId(), durationMonths, amountTiyin);
 
         String payUrl = pixyService.createPayment(payment, amountSom);
 
         return CreatePaymentOrderResponse.builder()
                 .orderId(payment.getId())
-                .amount(amountTiyin)
+                .durationMonths(durationMonths)
+                .accessDays(accessDays)
+                .baseAmountInSom(baseAmountSom)
+                .commissionInSom(commissionSom)
                 .amountInSom(amountSom)
+                .amount(amountTiyin)
                 .provider(PaymentProvider.PIXY)
                 .payUrl(payUrl)
                 .build();
@@ -109,27 +92,36 @@ public class PaymentService {
 
     @Transactional
     public void activateAccess(Payment payment) {
-        log.info("Access faollashtirilmoqda: paymentId={}, userId={}, type={}",
-                payment.getId(), payment.getUser().getId(), payment.getPaymentType());
+        log.info("Access faollashtirilmoqda: paymentId={}, userId={}, seriesId={}, kunlar={}",
+                payment.getId(), payment.getUser().getId(), payment.getSeries().getId(), payment.getSubscriptionDays());
 
-        if (payment.getPaymentType() == PaymentType.SUBSCRIPTION) {
-            movieAccessService.updateUserAccessWithSubscription(
-                    payment.getUser().getId(),
-                    Collections.emptyMap(),
-                    true,
-                    payment.getSubscriptionDays()
-            );
-        } else if (payment.getPaymentType() == PaymentType.INDIVIDUAL_SERIES) {
-            movieAccessService.grantPaidAccess(
-                    payment.getUser().getId(),
-                    payment.getSeries().getId(),
-                    individualAccessDays
-            );
-        }
+        movieAccessService.grantPaidAccess(
+                payment.getUser().getId(),
+                payment.getSeries().getId(),
+                payment.getSubscriptionDays()
+        );
 
         payment.setStatus(PaymentStatus.PAID);
         paymentRepository.save(payment);
         log.info("Access faollashtirildi: paymentId={}", payment.getId());
+    }
+
+    private int resolveDuration(Integer durationMonths) {
+        if (durationMonths == null || durationMonths == 1) return 1;
+        if (durationMonths == 3) return 3;
+        throw new RuntimeException("durationMonths faqat 1 yoki 3 bo'lishi mumkin");
+    }
+
+    private long resolvePrice(Series series, int durationMonths) {
+        if (durationMonths == 1) {
+            if (series.getMonthlyPrice() == null)
+                throw new RuntimeException("Bu serialda 1 oylik tarif mavjud emas");
+            return series.getMonthlyPrice();
+        } else {
+            if (series.getQuarterlyPrice() == null)
+                throw new RuntimeException("Bu serialda 3 oylik tarif mavjud emas");
+            return series.getQuarterlyPrice();
+        }
     }
 
     public Optional<Payment> findById(Long id) {
@@ -138,11 +130,5 @@ public class PaymentService {
 
     public Payment save(Payment payment) {
         return paymentRepository.save(payment);
-    }
-
-    private long calculateSubscriptionPrice(int days) {
-        if (days <= 30) return monthlyPriceSom;
-        if (days <= 90) return quarterlyPriceSom;
-        return yearlyPriceSom;
     }
 }

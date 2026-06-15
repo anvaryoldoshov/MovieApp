@@ -26,6 +26,9 @@ public class Series {
 
     private String status;
 
+    private Long monthlyPrice;   // 1 oylik narx (null = tarif yo'q)
+    private Long quarterlyPrice; // 3 oylik narx (null = tarif yo'q)
+
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Banner> banners;

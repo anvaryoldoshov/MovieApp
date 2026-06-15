@@ -1,6 +1,7 @@
 
 package com.example.movieapp.dto;
 
+import com.example.movieapp.enums.Role;
 import lombok.*;
 
 @Getter
@@ -11,9 +12,9 @@ public class AuthResponse {
     private Long id;
     private String username;
     private String email;
-    private Boolean subscription;
     private Long userId;
-    private String token; // access token
+    private Role role;
+    private String token;
     private String refreshToken;
     private String deviceId;
 }

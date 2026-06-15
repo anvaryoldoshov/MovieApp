@@ -10,6 +10,9 @@ import org.mapstruct.Named;
 @Mapper(componentModel = "spring")
 public interface SeriesMapper {
 
+    @Mapping(target = "hasAccess", ignore = true)
+    @Mapping(target = "monthlyPrice", source = "monthlyPrice")
+    @Mapping(target = "quarterlyPrice", source = "quarterlyPrice")
     SeriesDto toDto(Series series);
 
     @Mapping(target = "banners", ignore = true)

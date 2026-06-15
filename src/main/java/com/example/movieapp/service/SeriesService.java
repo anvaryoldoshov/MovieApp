@@ -71,6 +71,8 @@ public class SeriesService {
             series.setTitle(seriesDto.getTitle());
             series.setStatus(seriesDto.getStatus());
             series.setImagePath(seriesDto.getImagePath());
+            series.setMonthlyPrice(seriesDto.getMonthlyPrice());
+            series.setQuarterlyPrice(seriesDto.getQuarterlyPrice());
             Series updated = seriesRepo.save(series);
 
             Map<String, Object> response = new HashMap<>();

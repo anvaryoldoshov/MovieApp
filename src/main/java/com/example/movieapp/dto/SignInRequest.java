@@ -6,6 +6,5 @@ import lombok.Data;
 public class SignInRequest {
     private String email;
     private String password;
-    private String username;
     private String deviceId;
 }

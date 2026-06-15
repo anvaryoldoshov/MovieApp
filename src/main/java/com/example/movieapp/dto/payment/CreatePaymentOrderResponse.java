@@ -8,8 +8,12 @@ import lombok.Data;
 @Builder
 public class CreatePaymentOrderResponse {
     private Long orderId;
-    private Long amount;      // tiyin
-    private Long amountInSom; // so'm
+    private Integer durationMonths; // 1 yoki 3
+    private Integer accessDays;     // 30 yoki 90
+    private Long baseAmountInSom;   // serial narxi (komissiyasiz)
+    private Long commissionInSom;   // 4% komissiya
+    private Long amountInSom;       // jami (base + komissiya)
+    private Long amount;            // jami tiyin
     private PaymentProvider provider;
-    private String payUrl;    // Payme yoki Click checkout URL
+    private String payUrl;
 }

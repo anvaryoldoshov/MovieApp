@@ -198,36 +198,20 @@ public class MovieAccessService {
     }
 
     public boolean canUserWatchMovie(Long userId, Long serialId) {
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("User not found for ID: {}", userId);
-                    return new UserNotFoundException();
-                });
-
-        // 1. Obuna tekshiruvi
-        if (Boolean.TRUE.equals(user.getSubscription())) {
-            if (user.getSubscriptionEndDate() != null && LocalDate.now().isBefore(user.getSubscriptionEndDate())) {
-                log.debug("Access granted for user {} via general subscription.", userId);
-                return true;
-            } else {
-                log.debug("User {} subscription expired.", userId);
-            }
-        }
-
-        // 2. Shaxsiy pullik kirish tekshiruvi (Muddatini tekshirish)
-        Optional<MovieAccess> access = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsTrue(userId, serialId);
-        if (access.isPresent()) {
-            LocalDate endDate = access.get().getAccessEndDate();
+        // Pullik kirish (muddati tekshiriladi)
+        Optional<MovieAccess> paidAccess = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsTrue(userId, serialId);
+        if (paidAccess.isPresent()) {
+            LocalDate endDate = paidAccess.get().getAccessEndDate();
             if (endDate != null && LocalDate.now().isBefore(endDate)) {
-                log.debug("Access granted for user {} via paid individual access.", userId);
+                log.debug("Access granted for user {} via paid access to serial {}.", userId, serialId);
                 return true;
             }
         }
 
-        // 3. Serialning Bepul (Paid=false) kirish tekshiruvi (Muddatsiz hisoblanadi)
+        // Bepul kirish (muddatsiz)
         Optional<MovieAccess> freeAccess = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsFalse(userId, serialId);
         if (freeAccess.isPresent()) {
-            log.debug("Access granted for user {} via free access.", userId);
+            log.debug("Access granted for user {} via free access to serial {}.", userId, serialId);
             return true;
         }
 
