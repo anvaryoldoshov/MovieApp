@@ -43,6 +43,9 @@ public class AuthService {
     @Value("${web.google.client.Id}")
     private String webGoogleId;
 
+    @Value("${android.google.client.Id}")
+    private String androidGoogleId;
+
     private void userDeviceCreateOrUpdate(String deviceId, User user, String accessToken) {
         Optional<UserDevice> existingDevice = userDeviceRepository.findByUserId(user.getId());
 
@@ -154,7 +157,7 @@ public class AuthService {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
                     GsonFactory.getDefaultInstance())
-                    .setAudience(Arrays.asList(mobileGoogleId, webGoogleId))
+                    .setAudience(Arrays.asList(mobileGoogleId, webGoogleId, androidGoogleId))
                     .build();
 
             GoogleIdToken idToken = verifier.verify(idTokenString);
