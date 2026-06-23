@@ -40,7 +40,7 @@ public class HomeService {
         LocalDate today = LocalDate.now();
         Set<Long> accessIds = movieAccessRepository.findByUserId(userId).stream()
                 .filter(ma -> !ma.isPaid() ||
-                        (ma.getAccessEndDate() != null && today.isBefore(ma.getAccessEndDate())))
+                        (ma.getAccessEndDate() == null || !today.isAfter(ma.getAccessEndDate())))
                 .map(ma -> ma.getMovie().getId())
                 .collect(Collectors.toSet());
 
