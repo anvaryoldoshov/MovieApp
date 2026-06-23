@@ -1,10 +1,15 @@
 package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
+import com.example.movieapp.entities.User;
+import com.example.movieapp.exception.NoAccessToSeriesException;
+import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.EpisodeService;
+import com.example.movieapp.service.MovieAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,20 +21,21 @@ import java.util.List;
 @RequestMapping("/series")
 @RequiredArgsConstructor
 public class EpisodeController {
-private final EpisodeService episodeService;
-private final UserRepo userRepo;
+    private final EpisodeService episodeService;
+    private final UserRepo userRepo;
+    private final MovieAccessService movieAccessService;
 
-//@GetMapping("/{sid}/episode/{eid}")
-//public ResponseEntity<?> getEpisode(
-//        @PathVariable Long sid,
-//        @PathVariable Long eid
-//) {
-//    return ResponseEntity.ok(episodeService.getEpisodeById(sid, eid));
-//}
-
-@GetMapping("/{seriesId}/episodes")
-public ResponseEntity<List<EpisodeDto>> getEpisodesBySeries(@PathVariable Long seriesId) {
-    List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId);
-    return ResponseEntity.ok(episodes);
-}
+    @GetMapping("/{seriesId}/episodes")
+    public ResponseEntity<List<EpisodeDto>> getEpisodesBySeries(
+            @PathVariable Long seriesId,
+            Authentication authentication) {
+        String email = authentication.getName();
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+        if (!movieAccessService.canUserWatchMovie(user.getId(), seriesId)) {
+            throw new NoAccessToSeriesException();
+        }
+        List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId);
+        return ResponseEntity.ok(episodes);
+    }
 }

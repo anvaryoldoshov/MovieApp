@@ -35,4 +35,6 @@ public interface MovieAccessRepository extends JpaRepository<MovieAccess, Long> 
 
     Optional<MovieAccess> findByUser_IdAndMovie_IdAndPaidIsFalse(Long userId, Long serialId);
 
+    List<MovieAccess> findByPaidTrueAndAccessEndDateIsNotNullAndAccessEndDateBefore(java.time.LocalDate date);
+
 }

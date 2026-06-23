@@ -3,6 +3,7 @@ package com.example.movieapp.exceptionHandler;
 import com.example.movieapp.dto.BaseMessage;
 import com.example.movieapp.exception.AppException;
 import com.example.movieapp.exception.ErrorCode;
+import com.example.movieapp.exception.NoAccessToSeriesException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,14 @@ import jakarta.servlet.http.HttpServletRequest;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(NoAccessToSeriesException.class)
+    public ResponseEntity<BaseMessage> handleNoAccess(NoAccessToSeriesException ex, HttpServletRequest request) {
+        log.error("[{}] {} -> {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.errorCode().name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new BaseMessage(ex.errorCode().getCode(), ex.getMessage()));
+    }
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<BaseMessage> handleApp(AppException ex, HttpServletRequest request) {

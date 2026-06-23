@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,15 +28,13 @@ import java.util.Set;
 public class MovieAccessService {
 
     private final MovieAccessRepository movieAccessRepository;
-    private final UserRepo userRepository;
-    private final SeriesRepo seriesRepository;
     private final UserRepo userRepo;
     private final SeriesRepo seriesRepo;
 
     public MovieAccess giveAccess(Long userId, Long seriesId, boolean paid) {
-        User user = userRepository.findById(userId)
+        User user = userRepo.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
-        Series series = seriesRepository.findById(seriesId)
+        Series series = seriesRepo.findById(seriesId)
                 .orElseThrow(SeriesNotFoundException::new);
 
         if (movieAccessRepository.existsByUserIdAndMovieId(userId, seriesId)) {
@@ -49,17 +46,16 @@ public class MovieAccessService {
         access.setMovie(series);
         access.setPaid(paid);
 
-        if (Boolean.FALSE.equals(user.getSubscription()))
-            user.setSubscription(true);
-
         log.debug("Movie access has been given: User {} for Series {}", user.getUsername(), series.getTitle());
         return movieAccessRepository.save(access);
     }
 
     public List<Series> getUserAccessedSeries(Long userId) {
         log.debug("Getting paid series access for user {}", userId);
+        LocalDate today = LocalDate.now();
         return movieAccessRepository.findByUserIdAndPaidTrue(userId)
                 .stream()
+                .filter(access -> access.getAccessEndDate() == null || !today.isAfter(access.getAccessEndDate()))
                 .map(MovieAccess::getMovie)
                 .toList();
     }
@@ -84,10 +80,10 @@ public class MovieAccessService {
 
     @Transactional
     public void removeExpiredAccesses() {
-        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-        List<MovieAccess> expired = movieAccessRepository.findByPaidTrueAndCreatedAtBefore(oneMonthAgo);
+        LocalDate today = LocalDate.now();
+        List<MovieAccess> expired = movieAccessRepository.findByPaidTrueAndAccessEndDateIsNotNullAndAccessEndDateBefore(today);
         if (!expired.isEmpty()) {
-            log.info("Removing {} expired movies based on creation date.", expired.size());
+            log.info("Removing {} expired movie accesses.", expired.size());
             movieAccessRepository.deleteAll(expired);
         }
     }
@@ -198,17 +194,15 @@ public class MovieAccessService {
     }
 
     public boolean canUserWatchMovie(Long userId, Long serialId) {
-        // Pullik kirish (muddati tekshiriladi)
         Optional<MovieAccess> paidAccess = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsTrue(userId, serialId);
         if (paidAccess.isPresent()) {
             LocalDate endDate = paidAccess.get().getAccessEndDate();
-            if (endDate != null && LocalDate.now().isBefore(endDate)) {
+            if (endDate == null || !LocalDate.now().isAfter(endDate)) {
                 log.debug("Access granted for user {} via paid access to serial {}.", userId, serialId);
                 return true;
             }
         }
 
-        // Bepul kirish (muddatsiz)
         Optional<MovieAccess> freeAccess = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsFalse(userId, serialId);
         if (freeAccess.isPresent()) {
             log.debug("Access granted for user {} via free access to serial {}.", userId, serialId);
