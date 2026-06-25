@@ -21,7 +21,7 @@ public class JwtTokenProvider {
 
     public String generateAccessToken(String email, Role role) {
         Date now = new Date();
-        long accessTokenValidity = 30L * 24 * 3600_000;
+        long accessTokenValidity = 5L * 60 * 1000;
         Date expiry = new Date(now.getTime() + accessTokenValidity);
 
         return Jwts.builder()
