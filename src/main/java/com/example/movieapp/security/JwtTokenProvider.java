@@ -4,7 +4,6 @@ import javax.crypto.SecretKey;
 import java.util.Base64;
 import java.util.Date;
 
-import com.example.movieapp.entities.User;
 import com.example.movieapp.enums.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -22,9 +21,9 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
     }
 
-    public String generateToken(String email, long validityMillis, Role role) {
+    public String generateAccessToken(String email, Role role) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + validityMillis);
+        Date expiry = new Date(now.getTime() + accessTokenValidity);
 
         return Jwts.builder()
                 .setSubject(email)
@@ -33,18 +32,6 @@ public class JwtTokenProvider {
                 .setExpiration(expiry)
                 .signWith(secretKey)
                 .compact();
-    }
-
-    public String generateToken(String email, long validityMillis) {
-        return generateToken(email, validityMillis, Role.USER);
-    }
-
-    public String generateAccessToken(String email) {
-        return generateToken(email, accessTokenValidity, Role.USER);
-    }
-
-    public String generateAccessToken(String email, Role role) {
-        return generateToken(email, accessTokenValidity, role);
     }
 
     public String getRoleFromToken(String token) {
@@ -75,10 +62,6 @@ public class JwtTokenProvider {
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
-    }
-
-    public String generateToken(User user) {
-        return generateAccessToken(user.getEmail(), user.getRole());
     }
 
 }

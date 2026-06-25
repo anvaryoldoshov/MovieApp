@@ -20,10 +20,9 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepo userRepo;
 
-    private final long refreshTokenDurationMs = 60L * 24 * 3600_000L;
-
     @Transactional
     public RefreshToken createRefreshToken(String email) {
+        long refreshTokenDurationMs = 60L * 24 * 3600_000L;
         User user = userRepo.findByEmail(email).orElseThrow();
 
         refreshTokenRepository.deleteByUser(user);
