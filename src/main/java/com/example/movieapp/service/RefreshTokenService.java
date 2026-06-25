@@ -20,7 +20,7 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepo userRepo;
 
-    private final long refreshTokenDurationMs = 10L * 60 * 1000L;
+    private final long refreshTokenDurationMs = 60L * 24 * 3600_000L;
 
     @Transactional
     public RefreshToken createRefreshToken(String email) {

@@ -16,7 +16,7 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
 
-    private final long accessTokenValidity = 5L * 60 * 1000;
+    private final long accessTokenValidity = 30L * 24 * 3600_000;
 
     public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
