@@ -15,14 +15,13 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
 
-    private final long accessTokenValidity = 30L * 24 * 3600_000;
-
     public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
     }
 
     public String generateAccessToken(String email, Role role) {
         Date now = new Date();
+        long accessTokenValidity = 30L * 24 * 3600_000;
         Date expiry = new Date(now.getTime() + accessTokenValidity);
 
         return Jwts.builder()
