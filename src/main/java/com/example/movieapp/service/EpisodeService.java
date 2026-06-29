@@ -47,6 +47,7 @@ public class EpisodeService {
                 .thumbnail(dto.getThumbnail())
                 .fileName(dto.getFileName())
                 .videoUrl(dto.getVideoUrl())
+                .durationMinutes(dto.getDurationMinutes())
                 .series(series)
                 .build();
 
@@ -83,6 +84,10 @@ public class EpisodeService {
                     // Video URL mavjud bo'lsa yangilanadi
                     if (dto.getVideoUrl() != null && !dto.getVideoUrl().isBlank()) {
                         episode.setVideoUrl(dto.getVideoUrl());
+                    }
+
+                    if (dto.getDurationMinutes() != null) {
+                        episode.setDurationMinutes(dto.getDurationMinutes());
                     }
 
                     episodeRepo.save(episode);

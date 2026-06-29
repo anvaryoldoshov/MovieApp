@@ -25,10 +25,10 @@ public class PixyController {
     @Operation(summary = "Pixy webhook callback (to'lov amalga oshganda Pixy chaqiradi)")
     public ResponseEntity<String> callback(
             @RequestParam String status,
-            @RequestParam("order_id") String orderId,
+            @RequestParam(value = "order_id", required = false) String orderId,
             @RequestParam("order_hash") String orderHash,
-            @RequestParam Long amount,
-            @RequestParam String note
+            @RequestParam(required = false) String amount,
+            @RequestParam(required = false) String note
     ) {
         log.info("Pixy webhook: status={}, orderId={}, note={}", status, orderId, note);
 

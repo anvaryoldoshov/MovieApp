@@ -38,6 +38,7 @@ public class AdminEpisodeController {
             @RequestParam("title") String title,
             @RequestParam("videoUrl") String videoUrl,
             @RequestParam("episodeNumber") Integer episodeNumber,
+            @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
             @RequestParam("image") MultipartFile image
     ) {
         // Simple validation
@@ -55,6 +56,7 @@ public class AdminEpisodeController {
         episodeDto.setSeriesId(seriesId);
         episodeDto.setTitle(title);
         episodeDto.setEpisodeNumber(episodeNumber);
+        episodeDto.setDurationMinutes(durationMinutes);
         episodeDto.setThumbnail(imagePath);
         episodeDto.setVideoUrl(videoUrl);
         episodeDto.setFileName(title);
@@ -87,6 +89,7 @@ public class AdminEpisodeController {
             @RequestParam("title") String title,
             @RequestParam("episodeNumber") Integer episodeNumber,
             @RequestParam("videoUrl") String videoUrl,
+            @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
             @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         String imagePath = null;
@@ -98,6 +101,7 @@ public class AdminEpisodeController {
         episodeDto.setTitle(title);
         episodeDto.setEpisodeNumber(episodeNumber);
         episodeDto.setVideoUrl(videoUrl);
+        episodeDto.setDurationMinutes(durationMinutes);
 
         if (imagePath != null) {
             episodeDto.setThumbnail(imagePath);

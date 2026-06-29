@@ -14,15 +14,18 @@ import org.springframework.stereotype.Component;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
+    private final long accessTokenExpiryMs;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
+    public JwtTokenProvider(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.access-token-expiry-ms:900000}") long accessTokenExpiryMs) {
         this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
+        this.accessTokenExpiryMs = accessTokenExpiryMs;
     }
 
     public String generateAccessToken(String email, Role role) {
         Date now = new Date();
-        long accessTokenValidity = 5L * 60 * 1000;
-        Date expiry = new Date(now.getTime() + accessTokenValidity);
+        Date expiry = new Date(now.getTime() + accessTokenExpiryMs);
 
         return Jwts.builder()
                 .setSubject(email)
@@ -53,10 +56,27 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(secretKey)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return !claims.getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return false;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    public boolean isTokenExpired(String token) {
+        try {
             Jwts.parserBuilder()
                     .setSigningKey(secretKey)
                     .build()
                     .parseClaimsJws(token);
+            return false;
+        } catch (ExpiredJwtException e) {
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;

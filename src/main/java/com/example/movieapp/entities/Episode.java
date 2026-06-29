@@ -27,6 +27,8 @@ public class Episode {
 
     private String fileName;
 
+    private Integer durationMinutes;
+
     @ManyToOne
     @JoinColumn(name = "series_id")
     @JsonBackReference

@@ -2,7 +2,6 @@ package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.entities.User;
-import com.example.movieapp.exception.NoAccessToSeriesException;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.EpisodeService;
@@ -32,10 +31,9 @@ public class EpisodeController {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);
-        if (!movieAccessService.canUserWatchMovie(user.getId(), seriesId)) {
-            throw new NoAccessToSeriesException();
-        }
+        boolean hasAccess = movieAccessService.canUserWatchMovie(user.getId(), seriesId);
         List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId);
+        episodes.forEach(ep -> ep.setHasAccess(hasAccess));
         return ResponseEntity.ok(episodes);
     }
 }

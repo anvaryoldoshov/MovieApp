@@ -46,8 +46,15 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             try {
+                if (jwtTokenProvider.isTokenExpired(token)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"TOKEN_EXPIRED\",\"message\":\"Token muddati tugagan, refresh qiling\"}");
+                    return;
+                }
+
                 if (!jwtTokenProvider.validateToken(token)) {
-                    throw new AuthenticationServiceException("Token noto‘g‘ri yoki muddati tugagan");
+                    throw new AuthenticationServiceException("Token noto’g’ri");
                 }
 
                 String email = jwtTokenProvider.getEmailFromToken(token);

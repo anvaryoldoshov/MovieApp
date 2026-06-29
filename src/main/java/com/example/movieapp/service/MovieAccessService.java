@@ -181,6 +181,8 @@ public class MovieAccessService {
         Series series = seriesRepo.findById(seriesId)
                 .orElseThrow(SeriesNotFoundException::new);
 
+        LocalDate endDate = LocalDate.now().plusDays(accessDays);
+
         MovieAccess access = movieAccessRepository
                 .findByUser_IdAndMovie_IdAndPaidIsTrue(userId, seriesId)
                 .orElseGet(MovieAccess::new);
@@ -188,8 +190,18 @@ public class MovieAccessService {
         access.setUser(user);
         access.setMovie(series);
         access.setPaid(true);
-        access.setAccessEndDate(LocalDate.now().plusDays(accessDays));
+        access.setAccessEndDate(endDate);
         movieAccessRepository.save(access);
+
+        user.setSubscription(true);
+        if (user.getSubscriptionStartDate() == null) {
+            user.setSubscriptionStartDate(LocalDate.now());
+        }
+        if (user.getSubscriptionEndDate() == null || user.getSubscriptionEndDate().isBefore(endDate)) {
+            user.setSubscriptionEndDate(endDate);
+        }
+        userRepo.save(user);
+
         log.info("Pullik kirish berildi: user={}, series={}, kunlar={}", userId, seriesId, accessDays);
     }
 

@@ -18,4 +18,8 @@ public class EpisodeDto {
 
     private String fileName;
 
+    private Integer durationMinutes;
+
+    private boolean hasAccess;
+
 }

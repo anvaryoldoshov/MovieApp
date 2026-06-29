@@ -6,6 +6,7 @@ import com.example.movieapp.exception.SessionExpiredException;
 import com.example.movieapp.exception.SessionNotFoundException;
 import com.example.movieapp.repository.RefreshTokenRepository;
 import com.example.movieapp.repository.UserRepo;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,11 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepo userRepo;
 
+    @Value("${jwt.refresh-token-expiry-ms:2592000000}")
+    private long refreshTokenDurationMs;
+
     @Transactional
     public RefreshToken createRefreshToken(String email) {
-        long refreshTokenDurationMs = 10L * 60 * 1000;
         User user = userRepo.findByEmail(email).orElseThrow();
 
         refreshTokenRepository.deleteByUser(user);
