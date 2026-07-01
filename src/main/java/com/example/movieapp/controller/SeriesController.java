@@ -4,23 +4,22 @@ import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
-import com.example.movieapp.repository.BannerRepo;
+import com.example.movieapp.exception.NoAccessToSeriesException;
+import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.EpisodeService;
 import com.example.movieapp.service.FileStorageService;
 import com.example.movieapp.service.MovieAccessService;
 import com.example.movieapp.service.SeriesService;
-import com.example.movieapp.exception.NoAccessToSeriesException;
-import com.example.movieapp.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -30,7 +29,6 @@ import java.util.Optional;
 public class SeriesController {
     private final SeriesService seriesService;
     private final FileStorageService fileStorageService;
-    private final BannerRepo bannerRepo;
     private final SeriesRepo seriesRepo;
     private final UserRepo userRepo;
     private final MovieAccessService movieAccessService;
@@ -41,7 +39,8 @@ public class SeriesController {
         return seriesService.findAll();
     }
 
-    @GetMapping("/{serialId}/episode/{episodeId}") // EpisodeController dagi getEpisode metodi SeriesControllerga ko'chirildi
+    @GetMapping("/{serialId}/episode/{episodeId}")
+    // EpisodeController dagi getEpisode metodi SeriesControllerga ko'chirildi
     public ResponseEntity<?> getEpisode(@PathVariable Long serialId, @PathVariable Long episodeId, Authentication authentication) {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)

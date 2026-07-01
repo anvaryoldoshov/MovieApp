@@ -19,8 +19,5 @@ public interface EpisodeMapper {
     EpisodePartDto toPartDto(Episode episode);
 
     List<EpisodePartDto> toPartDtoList(List<Episode> episodes);
-
-    @Mapping(source = "seriesId", target = "series.id")
-    Episode toEpisodeEntity(EpisodeDto episodeDto);
 }
 
