@@ -21,7 +21,6 @@ public class AdminEpisodeController {
 
     private final EpisodeService episodeService;
     private final EpisodeMapper episodeMapper;
-    private final SeriesService seriesService;
     private final FileStorageService fileStorageService;
 
 
@@ -50,7 +49,6 @@ public class AdminEpisodeController {
 
         // Save image
         String imagePath = fileStorageService.saveImage("episodes", image);
-        String savedFileName = Paths.get(imagePath).getFileName().toString();
 
 
         // Create DTO
