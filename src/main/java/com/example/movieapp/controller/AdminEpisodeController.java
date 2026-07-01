@@ -5,13 +5,11 @@ import com.example.movieapp.entities.Episode;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.service.EpisodeService;
 import com.example.movieapp.service.FileStorageService;
-import com.example.movieapp.service.SeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
