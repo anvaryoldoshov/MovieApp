@@ -1,5 +1,6 @@
 package com.example.movieapp.controller;
 
+import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
@@ -50,7 +51,9 @@ public class SeriesController {
 
         if (!canWatch) throw new NoAccessToSeriesException();
 
-        return ResponseEntity.ok(episodeService.getEpisodeById(serialId, episodeId));
+        EpisodeDto episode = episodeService.getEpisodeById(serialId, episodeId);
+        episode.setHasAccess(true);
+        return ResponseEntity.ok(episode);
 //        return ResponseEntity.ok("Episode content will be here (After successful access check)");
     }
 

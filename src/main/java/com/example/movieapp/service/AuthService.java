@@ -2,9 +2,9 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.AuthResponse;
 import com.example.movieapp.dto.SignInRequest;
-import com.example.movieapp.enums.Role;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
+import com.example.movieapp.enums.Role;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserDeviceRepository;
 import com.example.movieapp.repository.UserRepo;
@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;

@@ -12,6 +12,7 @@ import java.util.List;
 public interface EpisodeMapper {
 
     @Mapping(source = "series.id", target = "seriesId")
+    @Mapping(target = "hasAccess", ignore = true)
     EpisodeDto toEpisodeDto(Episode episode);
 
     @Mapping(source = "id", target = "episodeId")
