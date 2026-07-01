@@ -21,7 +21,7 @@ public class BannerController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{seriesId}")
-    public ResponseEntity<?> createBanner(@RequestParam("seriesId") Long seriesId,
+    public ResponseEntity<?> createBanner(@PathVariable Long seriesId,
                                           @RequestParam("image") MultipartFile image) {
         try {
             String imagePath = fileStorageService.saveImage("banners", image);
