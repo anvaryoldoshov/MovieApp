@@ -47,7 +47,9 @@ public class EpisodeService {
                 .thumbnail(dto.getThumbnail())
                 .fileName(dto.getFileName())
                 .videoUrl(dto.getVideoUrl())
+                .durationHours(dto.getDurationHours())
                 .durationMinutes(dto.getDurationMinutes())
+                .durationSeconds(dto.getDurationSeconds())
                 .series(series)
                 .build();
 
@@ -86,8 +88,16 @@ public class EpisodeService {
                         episode.setVideoUrl(dto.getVideoUrl());
                     }
 
+                    if (dto.getDurationHours() != null) {
+                        episode.setDurationHours(dto.getDurationHours());
+                    }
+
                     if (dto.getDurationMinutes() != null) {
                         episode.setDurationMinutes(dto.getDurationMinutes());
+                    }
+
+                    if (dto.getDurationSeconds() != null) {
+                        episode.setDurationSeconds(dto.getDurationSeconds());
                     }
 
                     episodeRepo.save(episode);

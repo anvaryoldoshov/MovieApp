@@ -38,7 +38,9 @@ public class AdminEpisodeController {
             @RequestParam("title") String title,
             @RequestParam("videoUrl") String videoUrl,
             @RequestParam("episodeNumber") Integer episodeNumber,
+            @RequestParam(value = "durationHours", required = false) Integer durationHours,
             @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
+            @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
             @RequestParam("image") MultipartFile image
     ) {
         // Simple validation
@@ -56,7 +58,9 @@ public class AdminEpisodeController {
         episodeDto.setSeriesId(seriesId);
         episodeDto.setTitle(title);
         episodeDto.setEpisodeNumber(episodeNumber);
+        episodeDto.setDurationHours(durationHours);
         episodeDto.setDurationMinutes(durationMinutes);
+        episodeDto.setDurationSeconds(durationSeconds);
         episodeDto.setThumbnail(imagePath);
         episodeDto.setVideoUrl(videoUrl);
         episodeDto.setFileName(title);
@@ -89,7 +93,9 @@ public class AdminEpisodeController {
             @RequestParam("title") String title,
             @RequestParam("episodeNumber") Integer episodeNumber,
             @RequestParam("videoUrl") String videoUrl,
+            @RequestParam(value = "durationHours", required = false) Integer durationHours,
             @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
+            @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
             @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         String imagePath = null;
@@ -101,7 +107,9 @@ public class AdminEpisodeController {
         episodeDto.setTitle(title);
         episodeDto.setEpisodeNumber(episodeNumber);
         episodeDto.setVideoUrl(videoUrl);
+        episodeDto.setDurationHours(durationHours);
         episodeDto.setDurationMinutes(durationMinutes);
+        episodeDto.setDurationSeconds(durationSeconds);
 
         if (imagePath != null) {
             episodeDto.setThumbnail(imagePath);

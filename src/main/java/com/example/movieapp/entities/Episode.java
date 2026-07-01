@@ -27,7 +27,11 @@ public class Episode {
 
     private String fileName;
 
+    private Integer durationHours;
+
     private Integer durationMinutes;
+
+    private Integer durationSeconds;
 
     @ManyToOne
     @JoinColumn(name = "series_id")
