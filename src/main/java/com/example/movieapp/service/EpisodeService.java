@@ -8,6 +8,7 @@ import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.exception.EpisodeNotBelongToSeriesException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EpisodeService {
@@ -24,6 +26,7 @@ public class EpisodeService {
     private final EpisodeRepo episodeRepo;
     private final EpisodeMapper episodeMapper;
     private final SeriesRepo seriesRepo;
+    private final BunnyStreamService bunnyStreamService;
 
     public EpisodeDto getEpisodeById(Long seriesId, Long episodeId) {
 
@@ -47,13 +50,48 @@ public class EpisodeService {
                 .thumbnail(dto.getThumbnail())
                 .fileName(dto.getFileName())
                 .videoUrl(dto.getVideoUrl())
-                .durationHours(dto.getDurationHours())
-                .durationMinutes(dto.getDurationMinutes())
-                .durationSeconds(dto.getDurationSeconds())
                 .series(series)
                 .build();
 
+        applyDurationFromBunny(episode, dto.getVideoUrl());
+
         return episodeRepo.save(episode);
+    }
+
+    private boolean applyDurationFromBunny(Episode episode, String videoUrl) {
+        return bunnyStreamService.fetchDurationSeconds(videoUrl).map(totalSeconds -> {
+            episode.setDurationHours(totalSeconds / 3600);
+            episode.setDurationMinutes((totalSeconds % 3600) / 60);
+            episode.setDurationSeconds(totalSeconds % 60);
+            return true;
+        }).orElseGet(() -> {
+            log.warn("Episode uchun Bunny'dan duration olinmadi, videoUrl={}", videoUrl);
+            return false;
+        });
+    }
+
+    /**
+     * Duration'i hali yozilmagan eski episode'larni Bunny Stream API orqali bir martalik to'ldiradi.
+     */
+    public Map<String, Object> backfillMissingDurations() {
+        List<Episode> episodes = episodeRepo.findByDurationMinutesIsNull();
+
+        int updated = 0;
+        int failed = 0;
+        for (Episode episode : episodes) {
+            if (applyDurationFromBunny(episode, episode.getVideoUrl())) {
+                episodeRepo.save(episode);
+                updated++;
+            } else {
+                failed++;
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", episodes.size());
+        result.put("updated", updated);
+        result.put("failed", failed);
+        return result;
     }
 
 
@@ -83,21 +121,10 @@ public class EpisodeService {
                         episode.setFileName(dto.getFileName());
                     }
 
-                    // Video URL mavjud bo'lsa yangilanadi
+                    // Video URL mavjud bo'lsa yangilanadi, davomiylik Bunny'dan qayta olinadi
                     if (dto.getVideoUrl() != null && !dto.getVideoUrl().isBlank()) {
                         episode.setVideoUrl(dto.getVideoUrl());
-                    }
-
-                    if (dto.getDurationHours() != null) {
-                        episode.setDurationHours(dto.getDurationHours());
-                    }
-
-                    if (dto.getDurationMinutes() != null) {
-                        episode.setDurationMinutes(dto.getDurationMinutes());
-                    }
-
-                    if (dto.getDurationSeconds() != null) {
-                        episode.setDurationSeconds(dto.getDurationSeconds());
+                        applyDurationFromBunny(episode, dto.getVideoUrl());
                     }
 
                     episodeRepo.save(episode);

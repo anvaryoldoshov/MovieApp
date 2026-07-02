@@ -7,6 +7,7 @@ import com.example.movieapp.entities.Series;
 import com.example.movieapp.mapper.BannerMapper;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.repository.BannerRepo;
+import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.exception.BannerNotFoundException;
 import com.example.movieapp.exception.SeriesNotFoundException;
@@ -24,6 +25,7 @@ public class BannerService {
 
     private final BannerRepo bannerRepo;
     private final SeriesRepo seriesRepo;
+    private final EpisodeRepo episodeRepo;
     private final SeriesMapper seriesMapper;
     private final BannerMapper bannerMapper;
 
@@ -33,7 +35,8 @@ public class BannerService {
                         banner.getId(),
                         banner.getImage(),
                         banner.getSeries() != null ? banner.getSeries().getId() : null,
-                        banner.getSeries() != null ? banner.getSeries().getTitle() : "N/A"
+                        banner.getSeries() != null ? banner.getSeries().getTitle() : "N/A",
+                        banner.getSeries() != null && episodeRepo.existsBySeriesId(banner.getSeries().getId())
                 ))
                 .collect(Collectors.toList());
     }

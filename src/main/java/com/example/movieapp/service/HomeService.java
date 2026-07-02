@@ -9,6 +9,7 @@ import com.example.movieapp.entities.User;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.mapper.UserMapper;
 import com.example.movieapp.repository.BannerRepo;
+import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.MovieAccessRepository;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.repository.UserRepo;
@@ -28,6 +29,7 @@ public class HomeService {
     private final UserRepo userRepo;
     private final SeriesRepo seriesRepo;
     private final BannerRepo bannerRepo;
+    private final EpisodeRepo episodeRepo;
     private final MovieAccessRepository movieAccessRepository;
     private final UserMapper userMapper;
     private final SeriesMapper seriesMapper;
@@ -48,6 +50,7 @@ public class HomeService {
                 .map(series -> {
                     SeriesDto dto = seriesMapper.toDto(series);
                     dto.setHasAccess(accessIds.contains(series.getId()));
+                    dto.setHasEpisode(episodeRepo.existsBySeriesId(series.getId()));
                     return dto;
                 })
                 .toList();
@@ -59,6 +62,7 @@ public class HomeService {
                     if (series != null) {
                         movie = seriesMapper.toDto(series);
                         movie.setHasAccess(accessIds.contains(series.getId()));
+                        movie.setHasEpisode(episodeRepo.existsBySeriesId(series.getId()));
                     }
                     return BannerDto.builder()
                             .image(banner.getImage())

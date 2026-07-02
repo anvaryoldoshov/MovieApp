@@ -11,6 +11,7 @@ import org.mapstruct.Named;
 public interface SeriesMapper {
 
     @Mapping(target = "hasAccess", ignore = true)
+    @Mapping(target = "hasEpisode", ignore = true)
     @Mapping(target = "monthlyPrice", source = "monthlyPrice")
     @Mapping(target = "quarterlyPrice", source = "quarterlyPrice")
     SeriesDto toDto(Series series);

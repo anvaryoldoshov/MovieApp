@@ -19,6 +19,8 @@ public class SeriesDto {
 
     private boolean hasAccess;
 
+    private boolean hasEpisode;
+
     private Long monthlyPrice;   // null bo'lsa 1 oylik tarif yo'q
     private Long quarterlyPrice; // null bo'lsa 3 oylik tarif yo'q
 

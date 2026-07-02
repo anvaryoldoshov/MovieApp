@@ -42,7 +42,13 @@ public class SeriesService {
 
 
     public ResponseEntity<List<SeriesDto>> findAll() {
-        List<SeriesDto> series = seriesRepo.findAll().stream().map(seriesMapper::toDto).toList();
+        List<SeriesDto> series = seriesRepo.findAll().stream()
+                .map(s -> {
+                    SeriesDto dto = seriesMapper.toDto(s);
+                    dto.setHasEpisode(episodeRepo.existsBySeriesId(s.getId()));
+                    return dto;
+                })
+                .toList();
         return ResponseEntity.ok(series);
     }
 

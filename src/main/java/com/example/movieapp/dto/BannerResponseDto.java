@@ -12,4 +12,5 @@ public class BannerResponseDto {
     private String image;
     private Long seriesId;
     private String seriesTitle;
+    private boolean hasEpisode;
 }
