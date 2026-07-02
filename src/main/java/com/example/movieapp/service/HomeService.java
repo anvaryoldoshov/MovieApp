@@ -3,16 +3,11 @@ package com.example.movieapp.service;
 import com.example.movieapp.dto.BannerDto;
 import com.example.movieapp.dto.HomeResponse;
 import com.example.movieapp.dto.SeriesDto;
-import com.example.movieapp.entities.Banner;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.mapper.UserMapper;
-import com.example.movieapp.repository.BannerRepo;
-import com.example.movieapp.repository.EpisodeRepo;
-import com.example.movieapp.repository.MovieAccessRepository;
-import com.example.movieapp.repository.SeriesRepo;
-import com.example.movieapp.repository.UserRepo;
+import com.example.movieapp.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
