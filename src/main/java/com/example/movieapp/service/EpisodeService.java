@@ -74,10 +74,11 @@ public class EpisodeService {
     }
 
     /**
-     * Duration'i hali yozilmagan eski episode'larni Bunny Stream API orqali bir martalik to'ldiradi.
+     * Duration, fayl hajmi yoki download link'i hali yozilmagan eski episode'larni
+     * Bunny Stream API orqali bir martalik to'ldiradi.
      */
     public Map<String, Object> backfillMissingDurations() {
-        List<Episode> episodes = episodeRepo.findByDurationMinutesIsNull();
+        List<Episode> episodes = episodeRepo.findByDurationMinutesIsNullOrFileSizeBytesIsNull();
 
         int updated = 0;
         int failed = 0;
