@@ -59,13 +59,16 @@ public class EpisodeService {
     }
 
     private boolean applyDurationFromBunny(Episode episode, String videoUrl) {
-        return bunnyStreamService.fetchDurationSeconds(videoUrl).map(totalSeconds -> {
+        return bunnyStreamService.fetchVideoInfo(videoUrl).map(info -> {
+            int totalSeconds = info.durationSeconds();
             episode.setDurationHours(totalSeconds / 3600);
             episode.setDurationMinutes((totalSeconds % 3600) / 60);
             episode.setDurationSeconds(totalSeconds % 60);
+            episode.setFileSizeBytes(info.sizeBytes());
+            episode.setDownloadUrl(info.downloadUrl());
             return true;
         }).orElseGet(() -> {
-            log.warn("Episode uchun Bunny'dan duration olinmadi, videoUrl={}", videoUrl);
+            log.warn("Episode uchun Bunny'dan video ma'lumoti olinmadi, videoUrl={}", videoUrl);
             return false;
         });
     }

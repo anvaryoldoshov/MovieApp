@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -21,8 +23,8 @@ import java.util.regex.Pattern;
 public class BunnyStreamService {
 
     // https://vz-xxxxx.b-cdn.net/{videoGuid}/playlist.m3u8
-    private static final Pattern VIDEO_ID_PATTERN =
-            Pattern.compile("b-cdn\\.net/([0-9a-fA-F\\-]{36})/");
+    private static final Pattern VIDEO_URL_PATTERN =
+            Pattern.compile("(https?://[^/]+)/([0-9a-fA-F\\-]{36})/");
 
     private final RestTemplate restTemplate;
 
@@ -35,21 +37,27 @@ public class BunnyStreamService {
     @Value("${bunny.stream.api-url:https://video.bunnycdn.com/library}")
     private String apiUrl;
 
+    public record BunnyVideoInfo(int durationSeconds, long sizeBytes, String downloadUrl) {
+    }
+
     /**
-     * Bunny Stream API orqali video davomiyligini (soniyalarda) oladi.
+     * Bunny Stream API orqali video haqida to'liq ma'lumot oladi: davomiylik (soniya),
+     * hajm (bayt) va eng yuqori sifatdagi mp4 fayl uchun to'g'ridan-to'g'ri havola.
      * Sozlamalar yo'q yoki so'rov muvaffaqiyatsiz bo'lsa, bo'sh Optional qaytaradi.
      */
-    public Optional<Integer> fetchDurationSeconds(String videoUrl) {
+    public Optional<BunnyVideoInfo> fetchVideoInfo(String videoUrl) {
         if (libraryId.isBlank() || apiKey.isBlank()) {
             log.warn("Bunny Stream API sozlanmagan (bunny.stream.library-id / bunny.stream.api-key yo'q)");
             return Optional.empty();
         }
 
-        String videoId = extractVideoId(videoUrl);
-        if (videoId == null) {
+        Matcher matcher = videoUrl == null ? null : VIDEO_URL_PATTERN.matcher(videoUrl);
+        if (matcher == null || !matcher.find()) {
             log.warn("Video URL'dan Bunny video ID topilmadi: {}", videoUrl);
             return Optional.empty();
         }
+        String cdnHost = matcher.group(1);
+        String videoId = matcher.group(2);
 
         String url = apiUrl + "/" + libraryId + "/videos/" + videoId;
         HttpHeaders headers = new HttpHeaders();
@@ -59,22 +67,38 @@ public class BunnyStreamService {
         try {
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
             Map<?, ?> body = response.getBody();
-            if (body == null || body.get("length") == null) {
-                log.warn("Bunny API javobida 'length' topilmadi: {}", body);
+            if (body == null || body.get("length") == null || body.get("storageSize") == null) {
+                log.warn("Bunny API javobida 'length'/'storageSize' topilmadi: {}", body);
                 return Optional.empty();
             }
-            return Optional.of(((Number) body.get("length")).intValue());
+
+            int durationSeconds = ((Number) body.get("length")).intValue();
+            long sizeBytes = ((Number) body.get("storageSize")).longValue();
+            String downloadUrl = buildDownloadUrl(cdnHost, videoId, (String) body.get("availableResolutions"));
+
+            return Optional.of(new BunnyVideoInfo(durationSeconds, sizeBytes, downloadUrl));
         } catch (Exception e) {
             log.error("Bunny Stream API'ga murojaat xatosi (videoId={}): {}", videoId, e.getMessage());
             return Optional.empty();
         }
     }
 
-    private String extractVideoId(String videoUrl) {
-        if (videoUrl == null) {
+    /**
+     * Eng yuqori mavjud sifatdagi (masalan 1080p) to'g'ridan-to'g'ri mp4 fayl havolasini quradi.
+     * Bunny Stream'da MP4 fallback yoqilgan bo'lishi kerak (play_{res}.mp4 fayllari yaratiladi).
+     */
+    private String buildDownloadUrl(String cdnHost, String videoId, String availableResolutions) {
+        if (availableResolutions == null || availableResolutions.isBlank()) {
             return null;
         }
-        Matcher matcher = VIDEO_ID_PATTERN.matcher(videoUrl);
-        return matcher.find() ? matcher.group(1) : null;
+        String highestResolution = Arrays.stream(availableResolutions.split(","))
+                .map(String::trim)
+                .filter(res -> !res.isEmpty())
+                .max(Comparator.comparingInt(res -> Integer.parseInt(res.replaceAll("[^0-9]", ""))))
+                .orElse(null);
+        if (highestResolution == null) {
+            return null;
+        }
+        return cdnHost + "/" + videoId + "/play_" + highestResolution + ".mp4";
     }
 }

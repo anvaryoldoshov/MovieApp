@@ -33,6 +33,10 @@ public class Episode {
 
     private Integer durationSeconds;
 
+    private Long fileSizeBytes;
+
+    private String downloadUrl;
+
     @ManyToOne
     @JoinColumn(name = "series_id")
     @JsonBackReference

@@ -24,6 +24,10 @@ public class EpisodeDto {
 
     private Integer durationSeconds;
 
+    private Double fileSizeMb;
+
+    private String downloadUrl;
+
     private boolean hasAccess;
 
 }
