@@ -26,8 +26,6 @@ public class EpisodeDto {
 
     private Double fileSizeMb;
 
-    private String downloadUrl;
-
     private boolean hasAccess;
 
 }

@@ -33,7 +33,7 @@ public class EpisodeController {
                 .orElseThrow(UserNotFoundException::new);
         boolean hasAccess = movieAccessService.canUserWatchMovie(user.getId(), seriesId);
         List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId);
-        episodes.forEach(ep -> ep.setHasAccess(hasAccess));
+        episodes.forEach(ep -> episodeService.finalizeVideoUrlForAccess(ep, hasAccess));
         return ResponseEntity.ok(episodes);
     }
 }

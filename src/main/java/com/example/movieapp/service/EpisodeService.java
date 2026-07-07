@@ -37,7 +37,9 @@ public class EpisodeService {
             throw new EpisodeNotBelongToSeriesException();
         }
 
-        return episodeMapper.toEpisodeDto(episode);
+        EpisodeDto dto = episodeMapper.toEpisodeDto(episode);
+        dto.setVideoUrl(bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()));
+        return dto;
     }
 
     public Episode addEpisode(Long seriesId, EpisodeDto dto) {
@@ -65,7 +67,6 @@ public class EpisodeService {
             episode.setDurationMinutes((totalSeconds % 3600) / 60);
             episode.setDurationSeconds(totalSeconds % 60);
             episode.setFileSizeBytes(info.sizeBytes());
-            episode.setDownloadUrl(info.downloadUrl());
             return true;
         }).orElseGet(() -> {
             log.warn("Episode uchun Bunny'dan video ma'lumoti olinmadi, videoUrl={}", videoUrl);
@@ -74,8 +75,8 @@ public class EpisodeService {
     }
 
     /**
-     * Duration, fayl hajmi yoki download link'i hali yozilmagan eski episode'larni
-     * Bunny Stream API orqali bir martalik to'ldiradi.
+     * Duration yoki fayl hajmi hali yozilmagan eski episode'larni Bunny Stream API
+     * orqali bir martalik to'ldiradi.
      */
     public Map<String, Object> backfillMissingDurations() {
         List<Episode> episodes = episodeRepo.findByDurationMinutesIsNullOrFileSizeBytesIsNull();
@@ -160,6 +161,16 @@ public class EpisodeService {
         return episodes.stream()
                 .map(episodeMapper::toEpisodeDto)
                 .toList();
+    }
+
+    /**
+     * Obunasi yo'q foydalanuvchiga video havolasi umuman berilmaydi (faqat hasAccess
+     * belgisi ko'rinadi); obunasi bor foydalanuvchiga esa muddati cheklangan token bilan
+     * imzolangan havola beriladi, shunda u taqsimlab yuborilsa ham tez orada ishlamay qoladi.
+     */
+    public void finalizeVideoUrlForAccess(EpisodeDto dto, boolean hasAccess) {
+        dto.setHasAccess(hasAccess);
+        dto.setVideoUrl(hasAccess ? bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()) : null);
     }
 
 }

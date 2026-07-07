@@ -10,8 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -24,7 +27,11 @@ public class BunnyStreamService {
 
     // https://vz-xxxxx.b-cdn.net/{videoGuid}/playlist.m3u8
     private static final Pattern VIDEO_URL_PATTERN =
-            Pattern.compile("(https?://[^/]+)/([0-9a-fA-F\\-]{36})/");
+            Pattern.compile("(https?://[^/]+)(/[0-9a-fA-F\\-]{36}/)");
+
+    // Havola bir necha soatlik pleer sessiyasi davomida ishlashi uchun yetarli, lekin
+    // taqsimlab yuborilgan holda uzoq muddat ishlamasligi uchun qisqa muddatga cheklangan.
+    private static final long TOKEN_TTL_SECONDS = 4 * 60 * 60;
 
     private final RestTemplate restTemplate;
 
@@ -37,12 +44,15 @@ public class BunnyStreamService {
     @Value("${bunny.stream.api-url:https://video.bunnycdn.com/library}")
     private String apiUrl;
 
-    public record BunnyVideoInfo(int durationSeconds, long sizeBytes, String downloadUrl) {
+    // Bunny dashboard > Pull Zone/Stream > Security > Token Authentication'dagi maxfiy kalit.
+    @Value("${bunny.stream.token-auth-key:}")
+    private String tokenAuthKey;
+
+    public record BunnyVideoInfo(int durationSeconds, long sizeBytes) {
     }
 
     /**
-     * Bunny Stream API orqali video haqida to'liq ma'lumot oladi: davomiylik (soniya),
-     * hajm (bayt) va eng yuqori sifatdagi mp4 fayl uchun to'g'ridan-to'g'ri havola.
+     * Bunny Stream API orqali video haqida ma'lumot oladi: davomiylik (soniya) va hajm (bayt).
      * Sozlamalar yo'q yoki so'rov muvaffaqiyatsiz bo'lsa, bo'sh Optional qaytaradi.
      */
     public Optional<BunnyVideoInfo> fetchVideoInfo(String videoUrl) {
@@ -51,13 +61,11 @@ public class BunnyStreamService {
             return Optional.empty();
         }
 
-        Matcher matcher = videoUrl == null ? null : VIDEO_URL_PATTERN.matcher(videoUrl);
-        if (matcher == null || !matcher.find()) {
+        String videoId = extractVideoId(videoUrl);
+        if (videoId == null) {
             log.warn("Video URL'dan Bunny video ID topilmadi: {}", videoUrl);
             return Optional.empty();
         }
-        String cdnHost = matcher.group(1);
-        String videoId = matcher.group(2);
 
         String url = apiUrl + "/" + libraryId + "/videos/" + videoId;
         HttpHeaders headers = new HttpHeaders();
@@ -74,9 +82,8 @@ public class BunnyStreamService {
 
             int durationSeconds = ((Number) body.get("length")).intValue();
             long sizeBytes = ((Number) body.get("storageSize")).longValue();
-            String downloadUrl = buildDownloadUrl(cdnHost, videoId, (String) body.get("availableResolutions"));
 
-            return Optional.of(new BunnyVideoInfo(durationSeconds, sizeBytes, downloadUrl));
+            return Optional.of(new BunnyVideoInfo(durationSeconds, sizeBytes));
         } catch (Exception e) {
             log.error("Bunny Stream API'ga murojaat xatosi (videoId={}): {}", videoId, e.getMessage());
             return Optional.empty();
@@ -84,21 +91,53 @@ public class BunnyStreamService {
     }
 
     /**
-     * Eng yuqori mavjud sifatdagi (masalan 1080p) to'g'ridan-to'g'ri mp4 fayl havolasini quradi.
-     * Bunny Stream'da MP4 fallback yoqilgan bo'lishi kerak (play_{res}.mp4 fayllari yaratiladi).
+     * HLS playback URL'ga (m3u8) muddati cheklangan token qo'shadi, shunda foydalanuvchiga
+     * berilgan havola faqat cheklangan vaqt davomida ishlaydi va taqsimlab yuborilsa ham
+     * tez orada yaroqsiz bo'lib qoladi. Token butun video papkasi (guid) uchun imzolanadi,
+     * shu bois playlist ichidagi .ts segmentlar ham qo'shimcha so'rovsiz ishlaydi.
+     *
+     * Ishlashi uchun Bunny'da (Stream kutubxonasi bog'langan Pull Zone > Security) Token
+     * Authentication yoqilgan va bu yerdagi kalit bilan bir xil bo'lishi shart. Kalit
+     * sozlanmagan bo'lsa, havola imzolanmasdan qaytariladi (mavjud xulq-atvor saqlanadi).
      */
-    private String buildDownloadUrl(String cdnHost, String videoId, String availableResolutions) {
-        if (availableResolutions == null || availableResolutions.isBlank()) {
+    public String signPlaybackUrl(String videoUrl) {
+        if (tokenAuthKey.isBlank() || videoUrl == null) {
+            return videoUrl;
+        }
+
+        Matcher matcher = VIDEO_URL_PATTERN.matcher(videoUrl);
+        if (!matcher.find()) {
+            log.warn("Video URL formati kutilganidek emas, imzolanmadi: {}", videoUrl);
+            return videoUrl;
+        }
+        String directoryPath = matcher.group(2); // masalan: /1742ee4f-.../
+
+        long expires = Instant.now().getEpochSecond() + TOKEN_TTL_SECONDS;
+        String hashableBase = tokenAuthKey + directoryPath + expires;
+        String token = sha256Base64Url(hashableBase);
+
+        String separator = videoUrl.contains("?") ? "&" : "?";
+        return videoUrl + separator + "token=" + token + "&expires=" + expires;
+    }
+
+    private String extractVideoId(String videoUrl) {
+        if (videoUrl == null) {
             return null;
         }
-        String highestResolution = Arrays.stream(availableResolutions.split(","))
-                .map(String::trim)
-                .filter(res -> !res.isEmpty())
-                .max(Comparator.comparingInt(res -> Integer.parseInt(res.replaceAll("[^0-9]", ""))))
-                .orElse(null);
-        if (highestResolution == null) {
-            return null;
+        Matcher matcher = VIDEO_URL_PATTERN.matcher(videoUrl);
+        return matcher.find() ? matcher.group(2).replace("/", "") : null;
+    }
+
+    private String sha256Base64Url(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash)
+                    .replace("+", "-")
+                    .replace("/", "_")
+                    .replace("=", "");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 mavjud emas", e);
         }
-        return cdnHost + "/" + videoId + "/play_" + highestResolution + ".mp4";
     }
 }
