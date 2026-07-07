@@ -83,6 +83,11 @@ public class BunnyStreamService {
             int durationSeconds = ((Number) body.get("length")).intValue();
             long sizeBytes = ((Number) body.get("storageSize")).longValue();
 
+            if (durationSeconds <= 0 || sizeBytes <= 0) {
+                log.warn("Bunny'da video hali qayta ishlanmoqda (encoding tugamagan), keyinroq backfill orqali qayta urinib ko'riladi: videoId={}", videoId);
+                return Optional.empty();
+            }
+
             return Optional.of(new BunnyVideoInfo(durationSeconds, sizeBytes));
         } catch (Exception e) {
             log.error("Bunny Stream API'ga murojaat xatosi (videoId={}): {}", videoId, e.getMessage());
