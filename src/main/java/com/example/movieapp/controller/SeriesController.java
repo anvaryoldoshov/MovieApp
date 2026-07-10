@@ -4,7 +4,6 @@ import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
-import com.example.movieapp.exception.NoAccessToSeriesException;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.repository.UserRepo;
@@ -48,12 +47,9 @@ public class SeriesController {
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        if (!canWatch) throw new NoAccessToSeriesException();
-
         EpisodeDto episode = episodeService.getEpisodeById(serialId, episodeId);
-        episode.setHasAccess(true);
+        episodeService.finalizeVideoUrlForAccess(episode, canWatch);
         return ResponseEntity.ok(episode);
-//        return ResponseEntity.ok("Episode content will be here (After successful access check)");
     }
 
     @GetMapping("/{serialId}")
@@ -64,9 +60,7 @@ public class SeriesController {
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        if (!canWatch) throw new NoAccessToSeriesException();
-
-        return ResponseEntity.ok(seriesService.getDetails(serialId));
+        return ResponseEntity.ok(seriesService.getDetails(serialId, canWatch));
     }
 
 

@@ -52,12 +52,12 @@ public class SeriesService {
         return ResponseEntity.ok(series);
     }
 
-    public GetDetailsResponse getDetails(Long seriesId) {
+    public GetDetailsResponse getDetails(Long seriesId, boolean hasAccess) {
         Series series = seriesRepo.findById(seriesId).orElseThrow(() -> new RuntimeException("Series not found"));
 
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
 
-        return GetDetailsResponse.builder().id(series.getId()).title(series.getTitle()).parts(episodeMapper.toPartDtoList(episodes)).build();
+        return GetDetailsResponse.builder().id(series.getId()).title(series.getTitle()).parts(episodeMapper.toPartDtoList(episodes)).hasAccess(hasAccess).build();
     }
 
     public ResponseEntity<Map<String, Object>> saveSeries(SeriesDto seriesDto) {

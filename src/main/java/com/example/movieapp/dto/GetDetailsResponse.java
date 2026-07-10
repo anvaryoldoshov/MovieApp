@@ -15,4 +15,5 @@ public class GetDetailsResponse {
     private Long id;
     private String title;
     private List<EpisodePartDto> parts;
+    private boolean hasAccess;
 }
