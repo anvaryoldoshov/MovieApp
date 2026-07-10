@@ -37,9 +37,7 @@ public class EpisodeService {
             throw new EpisodeNotBelongToSeriesException();
         }
 
-        EpisodeDto dto = episodeMapper.toEpisodeDto(episode);
-        dto.setVideoUrl(bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()));
-        return dto;
+        return episodeMapper.toEpisodeDto(episode);
     }
 
     public Episode addEpisode(Long seriesId, EpisodeDto dto) {
