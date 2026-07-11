@@ -162,13 +162,12 @@ public class EpisodeService {
     }
 
     /**
-     * Obunasi yo'q foydalanuvchiga video havolasi umuman berilmaydi (faqat hasAccess
-     * belgisi ko'rinadi); obunasi bor foydalanuvchiga esa muddati cheklangan token bilan
-     * imzolangan havola beriladi, shunda u taqsimlab yuborilsa ham tez orada ishlamay qoladi.
+     * Obunasi bor-yo'qligidan qat'i nazar, muddati cheklangan token bilan imzolangan
+     * video havolasi qaytariladi; hasAccess belgisi frontendga obuna holatini bildirish uchun saqlanadi.
      */
     public void finalizeVideoUrlForAccess(EpisodeDto dto, boolean hasAccess) {
         dto.setHasAccess(hasAccess);
-        dto.setVideoUrl(hasAccess ? bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()) : null);
+        dto.setVideoUrl(bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()));
     }
 
 }
