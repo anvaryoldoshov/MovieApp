@@ -4,11 +4,13 @@ import com.example.movieapp.dto.GetDetailsResponse;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.entities.Episode;
 import com.example.movieapp.entities.Series;
+import com.example.movieapp.exception.SeriesHasActiveSubscribersException;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.repository.BannerRepo;
 import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.MovieAccessRepository;
+import com.example.movieapp.repository.PaymentRepository;
 import com.example.movieapp.repository.SeriesRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class SeriesService {
     private final EpisodeMapper episodeMapper;
     private final BannerRepo bannerRepo;
     private final MovieAccessRepository movieAccessRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -91,8 +94,12 @@ public class SeriesService {
 
     @Transactional
     public ResponseEntity<?> deleteSeries(Long seriesId) {
+        if (movieAccessRepository.existsActivePaidAccessByMovieId(seriesId)) {
+            throw new SeriesHasActiveSubscribersException();
+        }
         movieAccessRepository.deleteByMovie_Id(seriesId);
         bannerRepo.deleteBySeriesId(seriesId);
+        paymentRepository.detachSeries(seriesId);
         seriesRepo.deleteById(seriesId);
         return ResponseEntity.ok().build();
     }

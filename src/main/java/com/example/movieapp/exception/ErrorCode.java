@@ -12,6 +12,7 @@ public enum ErrorCode {
 
     // Series (2000-2099)
     SERIES_NOT_FOUND(2001, "Serial topilmadi"),
+    SERIES_HAS_ACTIVE_SUBSCRIBERS(2002, "Bu serialga obunasi faol foydalanuvchilar mavjud, shuning uchun uni o'chirib bo'lmaydi"),
 
     // Episode (3000-3099)
     EPISODE_NOT_FOUND(3001, "Epizod topilmadi"),
