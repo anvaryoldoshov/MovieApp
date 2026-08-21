@@ -16,4 +16,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Transactional
     @Query("UPDATE Payment p SET p.series = null WHERE p.series.id = :seriesId")
     void detachSeries(@Param("seriesId") Long seriesId);
+
+    void deleteByUserId(Long userId);
 }

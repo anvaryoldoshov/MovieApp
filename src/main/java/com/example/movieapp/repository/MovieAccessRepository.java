@@ -33,6 +33,8 @@ public interface MovieAccessRepository extends JpaRepository<MovieAccess, Long> 
 
     void deleteByUserIdAndPaidIsTrue(Long userId);
 
+    void deleteByUserId(Long userId);
+
     Optional<MovieAccess> findByUserAndMovie(User user, Series series);
 
     List<MovieAccess> findByUserAndPaidIsTrue(User user);
