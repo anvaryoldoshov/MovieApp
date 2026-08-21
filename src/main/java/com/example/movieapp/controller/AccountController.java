@@ -3,6 +3,7 @@ package com.example.movieapp.controller;
 import com.example.movieapp.dto.BaseMessage;
 import com.example.movieapp.dto.DeleteAccountConfirmRequest;
 import com.example.movieapp.dto.DeleteAccountRequest;
+import com.example.movieapp.dto.FcmTokenRequest;
 import com.example.movieapp.exception.InvalidDeleteCodeException;
 import com.example.movieapp.service.AccountDeletionCodeService;
 import com.example.movieapp.service.EmailService;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,6 +31,14 @@ public class AccountController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userService.deleteAccountByEmail(email);
         return ResponseEntity.ok(new BaseMessage(200, "Hisobingiz va unga bog'liq barcha ma'lumotlar muvaffaqiyatli o'chirildi"));
+    }
+
+    // Mobil ilova login qilingandan keyin FCM tokenini shu yerga yuboradi (push-notification uchun).
+    @PutMapping("/account/fcm-token")
+    public ResponseEntity<BaseMessage> updateFcmToken(@RequestBody FcmTokenRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        userService.updateFcmToken(email, request.getFcmToken());
+        return ResponseEntity.ok(new BaseMessage(200, "FCM token saqlandi"));
     }
 
     // 1-qadam: ilovasi bo'lmagan foydalanuvchi email kiritadi, emailga tasdiqlash kodi yuboriladi.

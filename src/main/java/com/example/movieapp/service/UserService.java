@@ -2,6 +2,7 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.UserDto;
 import com.example.movieapp.entities.User;
+import com.example.movieapp.entities.UserDevice;
 import com.example.movieapp.enums.Role;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.mapper.UserMapper;
@@ -81,6 +82,13 @@ public class UserService {
 
     public void assertUserExistsByEmail(String email) {
         userRepo.findByEmail(email).orElseThrow(UserNotFoundException::new);
+    }
+
+    public void updateFcmToken(String email, String fcmToken) {
+        User user = userRepo.findByEmail(email).orElseThrow(UserNotFoundException::new);
+        UserDevice device = userDeviceRepository.findByUser(user).orElseThrow(UserNotFoundException::new);
+        device.setFcmToken(fcmToken);
+        userDeviceRepository.save(device);
     }
 
     private void deleteAccountData(User user) {

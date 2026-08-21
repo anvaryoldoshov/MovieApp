@@ -23,5 +23,7 @@ public class UserDevice {
 
     private String token;
 
+    private String fcmToken;
+
     private Instant createdAt;
 }
