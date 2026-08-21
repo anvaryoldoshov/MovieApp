@@ -42,7 +42,7 @@
         font-size: 14px;
     }
     input[type="email"],
-    input[type="password"] {
+    input[type="text"] {
         width: 100%;
         box-sizing: border-box;
         padding: 10px 12px;
@@ -62,6 +62,10 @@
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
+    }
+    button.secondary {
+        background: #757575;
+        margin-top: 10px;
     }
     button:disabled {
         opacity: 0.6;
@@ -84,13 +88,22 @@
         background: #fdecea;
         color: #b71c1c;
     }
+    .hint {
+        font-size: 13px;
+        color: #666;
+        margin-top: 6px;
+    }
     .data-list li {
         margin-bottom: 4px;
+    }
+    #step2 {
+        display: none;
     }
     @media (prefers-color-scheme: dark) {
         body { background: #121212; color: #eaeaea; }
         .card { background: #1c1c1c; border-color: #333; }
-        input[type="email"], input[type="password"] { background: #1c1c1c; color: #eaeaea; border-color: #444; }
+        input[type="email"], input[type="text"] { background: #1c1c1c; color: #eaeaea; border-color: #444; }
+        .hint { color: #aaa; }
     }
 </style>
 </head>
@@ -108,18 +121,23 @@
 <p>Hisob va unga bog'liq barcha ma'lumotlar darhol o'chiriladi.</p>
 
 <h2>2-usul: Ilovasiz, shu sahifadan o'chirish</h2>
-<p>Agar ilovaga kira olmasangiz, quyidagi forma orqali email va parolingizni kiritib, hisobingizni o'chirish so'rovini yuborishingiz mumkin.</p>
+<p>Agar ilovaga kira olmasangiz, quyida emailingizni kiriting — emailingizga tasdiqlash kodi yuboriladi, so'ng shu kodni kiritib hisobingizni o'chirasiz.</p>
 
 <div class="card">
-    <form id="deleteForm">
+    <form id="step1">
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required autocomplete="email">
-
-        <label for="password">Parol</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password">
-
-        <button type="submit" id="submitBtn">Hisobni butunlay o'chirish</button>
+        <button type="submit" id="sendCodeBtn">Tasdiqlash kodini yuborish</button>
     </form>
+
+    <form id="step2">
+        <p class="hint">Kod <strong id="targetEmail"></strong> manziliga yuborildi.</p>
+        <label for="code">Tasdiqlash kodi (6 xonali)</label>
+        <input type="text" id="code" name="code" inputmode="numeric" maxlength="6" required>
+        <button type="submit" id="confirmBtn">Hisobni butunlay o'chirish</button>
+        <button type="button" class="secondary" id="backBtn">Ortga</button>
+    </form>
+
     <div id="successMsg" class="msg success">Hisobingiz va unga bog'liq barcha ma'lumotlar muvaffaqiyatli o'chirildi.</div>
     <div id="errorMsg" class="msg error"></div>
 </div>
@@ -137,49 +155,97 @@
 <p>Savollar bo'yicha: <a href="mailto:behruz.ravshanovich2004@gmail.com">behruz.ravshanovich2004@gmail.com</a></p>
 
 <script>
-    const form = document.getElementById('deleteForm');
-    const submitBtn = document.getElementById('submitBtn');
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const sendCodeBtn = document.getElementById('sendCodeBtn');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const backBtn = document.getElementById('backBtn');
+    const targetEmail = document.getElementById('targetEmail');
     const successMsg = document.getElementById('successMsg');
     const errorMsg = document.getElementById('errorMsg');
 
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
+    let currentEmail = '';
+
+    function hideMessages() {
         successMsg.style.display = 'none';
         errorMsg.style.display = 'none';
+    }
 
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
+    function showError(msg) {
+        errorMsg.textContent = msg;
+        errorMsg.style.display = 'block';
+    }
 
-        if (!confirm('Hisobingizni butunlay o\'chirmoqchimisiz? Bu amalni ortga qaytarib bo\'lmaydi.')) {
-            return;
-        }
+    step1.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideMessages();
+        currentEmail = document.getElementById('email').value.trim();
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Yuborilmoqda...';
+        sendCodeBtn.disabled = true;
+        sendCodeBtn.textContent = 'Yuborilmoqda...';
 
         try {
             const res = await fetch('/public/account/delete-request', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email: currentEmail })
             });
+            const data = await res.json().catch(() => null);
 
             if (res.ok) {
-                form.reset();
-                form.style.display = 'none';
-                successMsg.style.display = 'block';
+                targetEmail.textContent = currentEmail;
+                step1.style.display = 'none';
+                step2.style.display = 'block';
             } else {
-                const data = await res.json().catch(() => null);
-                errorMsg.textContent = (data && data.message) ? data.message : 'Xatolik yuz berdi. Email yoki parolni tekshirib, qayta urinib ko\'ring.';
-                errorMsg.style.display = 'block';
+                showError((data && data.message) ? data.message : 'Xatolik yuz berdi. Emailni tekshirib, qayta urinib ko\'ring.');
             }
         } catch (err) {
-            errorMsg.textContent = 'Server bilan bog\'lanishda xatolik yuz berdi.';
-            errorMsg.style.display = 'block';
+            showError('Server bilan bog\'lanishda xatolik yuz berdi.');
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Hisobni butunlay o\'chirish';
+            sendCodeBtn.disabled = false;
+            sendCodeBtn.textContent = 'Tasdiqlash kodini yuborish';
         }
+    });
+
+    step2.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideMessages();
+
+        const code = document.getElementById('code').value.trim();
+
+        if (!confirm('Hisobingizni butunlay o\'chirmoqchimisiz? Bu amalni ortga qaytarib bo\'lmaydi.')) {
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Yuborilmoqda...';
+
+        try {
+            const res = await fetch('/public/account/delete-confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: currentEmail, code })
+            });
+            const data = await res.json().catch(() => null);
+
+            if (res.ok) {
+                step2.style.display = 'none';
+                successMsg.style.display = 'block';
+            } else {
+                showError((data && data.message) ? data.message : 'Kod noto\'g\'ri yoki muddati tugagan.');
+            }
+        } catch (err) {
+            showError('Server bilan bog\'lanishda xatolik yuz berdi.');
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Hisobni butunlay o\'chirish';
+        }
+    });
+
+    backBtn.addEventListener('click', function () {
+        hideMessages();
+        step2.style.display = 'none';
+        step1.style.display = 'block';
     });
 </script>
 

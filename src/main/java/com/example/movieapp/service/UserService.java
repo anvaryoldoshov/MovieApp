@@ -3,7 +3,6 @@ package com.example.movieapp.service;
 import com.example.movieapp.dto.UserDto;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.enums.Role;
-import com.example.movieapp.exception.InvalidCredentialsException;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.mapper.UserMapper;
 import com.example.movieapp.repository.MovieAccessRepository;
@@ -14,7 +13,6 @@ import com.example.movieapp.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,7 +30,6 @@ public class UserService {
     private final UserDeviceRepository userDeviceRepository;
     private final MovieAccessRepository movieAccessRepository;
     private final PaymentRepository paymentRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
 
     public User getUserByEmail(String email) {
         Optional<User> byEmail = userRepo.findByEmail(email);
@@ -82,13 +79,8 @@ public class UserService {
         deleteAccountData(user);
     }
 
-    @Transactional
-    public void deleteAccountByEmailAndPassword(String email, String password) {
-        User user = userRepo.findByEmail(email).orElseThrow(UserNotFoundException::new);
-        if (user.getPassword() == null || !passwordEncoder.matches(password, user.getPassword())) {
-            throw new InvalidCredentialsException();
-        }
-        deleteAccountData(user);
+    public void assertUserExistsByEmail(String email) {
+        userRepo.findByEmail(email).orElseThrow(UserNotFoundException::new);
     }
 
     private void deleteAccountData(User user) {

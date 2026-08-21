@@ -9,6 +9,7 @@ public enum ErrorCode {
     SESSION_NOT_FOUND(1004, "Sessiya topilmadi, qayta kiring"),
     SESSION_EXPIRED(1005, "Sessiya muddati tugagan, qayta kiring"),
     ACCESS_DENIED(1006, "Sizda bu amalni bajarish huquqi yo'q"),
+    INVALID_DELETE_CODE(1007, "Tasdiqlash kodi noto'g'ri yoki muddati tugagan"),
 
     // Series (2000-2099)
     SERIES_NOT_FOUND(2001, "Serial topilmadi"),
