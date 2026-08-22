@@ -65,7 +65,7 @@ public class JwtFilter extends OncePerRequestFilter {
                         .orElseThrow(() -> new AuthenticationServiceException("Ushbu foydalanuvchiga device biriktirilmagan"));
 
                 if (!device.getToken().equals(token)) {
-                    logger.error("Token mos emas ,{} ,{}",device.getToken(),token);
+                    logger.error("Token mos emas, email={}, deviceId={}", email, deviceId);
                     throw new AuthenticationServiceException("Token mos emas");
                 }
 
