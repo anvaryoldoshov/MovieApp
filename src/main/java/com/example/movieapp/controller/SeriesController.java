@@ -35,8 +35,10 @@ public class SeriesController {
     private final EpisodeService episodeService;
 
     @GetMapping("/all")
-    public ResponseEntity<List<SeriesDto>> series() {
-        return seriesService.findAll();
+    public ResponseEntity<List<SeriesDto>> series(Authentication authentication) {
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return seriesService.findAll(isAdmin);
     }
 
     @GetMapping("/{serialId}/episode/{episodeId}")

@@ -27,6 +27,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SeriesService {
 
+    private static final String REMOVED_STATUS = "REMOVED";
+
     private final SeriesRepo seriesRepo;
     private final SeriesMapper seriesMapper;
     private final EpisodeRepo episodeRepo;
@@ -45,8 +47,9 @@ public class SeriesService {
     }
 
 
-    public ResponseEntity<List<SeriesDto>> findAll() {
+    public ResponseEntity<List<SeriesDto>> findAll(boolean includeHidden) {
         List<SeriesDto> series = seriesRepo.findAll().stream()
+                .filter(s -> includeHidden || !REMOVED_STATUS.equals(s.getStatus()))
                 .map(s -> {
                     SeriesDto dto = seriesMapper.toDto(s);
                     dto.setHasEpisode(episodeRepo.existsBySeriesId(s.getId()));
