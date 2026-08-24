@@ -161,8 +161,8 @@
         <button type="button" class="secondary" id="backBtn">Ortga</button>
     </form>
 
-    <div id="successMsg" class="msg success">Hisobingiz va unga bog'liq barcha ma'lumotlar muvaffaqiyatli o'chirildi.</div>
-    <div id="errorMsg" class="msg error"></div>
+    <div id="successMsg" class="msg">Hisobingiz va unga bog'liq barcha ma'lumotlar muvaffaqiyatli o'chirildi.</div>
+    <div id="errorMsg" class="msg"></div>
 </div>
 
 <h2>O'chiriladigan ma'lumotlar</h2>
@@ -196,7 +196,13 @@
 
     function showError(msg) {
         errorMsg.textContent = msg;
+        errorMsg.classList.add('error');
         errorMsg.style.display = 'block';
+    }
+
+    function showSuccess() {
+        successMsg.classList.add('success');
+        successMsg.style.display = 'block';
     }
 
     step1.addEventListener('submit', async function (e) {
@@ -253,7 +259,7 @@
 
             if (res.ok) {
                 step2.style.display = 'none';
-                successMsg.style.display = 'block';
+                showSuccess();
             } else {
                 showError((data && data.message) ? data.message : 'Kod noto\'g\'ri yoki muddati tugagan.');
             }
