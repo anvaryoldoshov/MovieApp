@@ -99,18 +99,41 @@
     #step2 {
         display: none;
     }
+    .brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .brand img {
+        max-width: 260px;
+        width: 100%;
+        height: auto;
+    }
+    .brand p {
+        margin: 8px 0 0;
+        color: #666;
+        font-size: 14px;
+    }
     @media (prefers-color-scheme: dark) {
         body { background: #121212; color: #eaeaea; }
         .card { background: #1c1c1c; border-color: #333; }
         input[type="email"], input[type="text"] { background: #1c1c1c; color: #eaeaea; border-color: #444; }
         .hint { color: #aaa; }
+        .brand p { color: #aaa; }
     }
 </style>
 </head>
 <body>
 
+<div class="brand">
+    <img src="/logo.png" alt="Tarixiy Kinolar">
+    <p>Tarixiy Kinolar — tarixiy mavzudagi filmlar va seriallarni tomosha qilish uchun mobil ilova.</p>
+</div>
+
 <h1>Hisobni va ma'lumotlarni o'chirish</h1>
-<p>Ushbu sahifa orqali siz ilova hisobingizni va u bilan bog'liq barcha ma'lumotlarni o'chirishingiz mumkin. Buni ilova o'rnatilmagan holatda ham amalga oshirish mumkin.</p>
+<p>Ushbu sahifa orqali siz <strong>Tarixiy Kinolar</strong> ilovasidagi hisobingizni va u bilan bog'liq barcha ma'lumotlarni o'chirishingiz mumkin. Buni ilova o'rnatilmagan holatda ham amalga oshirish mumkin.</p>
 
 <h2>1-usul: Ilova ichida o'chirish</h2>
 <ol>

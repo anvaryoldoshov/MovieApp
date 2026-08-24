@@ -37,7 +37,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui.html/**",
                                 "/api/payment/pixy/callback",
-                                "/delete-account.html"
+                                "/delete-account.html",
+                                "/logo.png"
                         ).permitAll()
                         .requestMatchers("/admin/**", "/users/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
