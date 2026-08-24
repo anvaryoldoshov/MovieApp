@@ -2,6 +2,7 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.GetDetailsResponse;
 import com.example.movieapp.dto.SeriesDto;
+import com.example.movieapp.dto.SeriesStatDto;
 import com.example.movieapp.entities.Episode;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.exception.SeriesHasActiveSubscribersException;
@@ -102,5 +103,26 @@ public class SeriesService {
         paymentRepository.detachSeries(seriesId);
         seriesRepo.deleteById(seriesId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Har bir serial/film uchun hozirgi kunda faol (to'lovli, muddati tugamagan) obunachilar soni.
+     */
+    public List<SeriesStatDto> getSeriesStatistics() {
+        Map<Long, Long> countsBySeriesId = movieAccessRepository.countActiveSubscribersGroupedBySeries().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
+
+        return seriesRepo.findAll().stream()
+                .map(s -> new SeriesStatDto(
+                        s.getId(),
+                        s.getTitle(),
+                        s.getImagePath(),
+                        countsBySeriesId.getOrDefault(s.getId(), 0L)
+                ))
+                .sorted((a, b) -> Long.compare(b.getSubscriberCount(), a.getSubscriberCount()))
+                .toList();
     }
 }

@@ -2,6 +2,7 @@ package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;
+import com.example.movieapp.dto.SeriesStatDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.UserNotFoundException;
@@ -115,6 +116,12 @@ public class SeriesController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteSeries(@PathVariable Long id) {
         return seriesService.deleteSeries(id);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/statistics")
+    public ResponseEntity<List<SeriesStatDto>> getStatistics() {
+        return ResponseEntity.ok(seriesService.getSeriesStatistics());
     }
 
 }
