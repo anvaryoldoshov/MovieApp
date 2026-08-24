@@ -21,7 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +42,7 @@ public class NotificationService {
     /**
      * Admin panel orqali barcha foydalanuvchilarga qo'lda push-notification yuborish.
      */
-    public int[] sendCustomNotification(String title, String body, String imageUrl, String sound) {
+    public int[] sendCustomNotification(String title, String body, String imageUrl, String sound, Map<String, String> extraData) {
         if (FirebaseApp.getApps().isEmpty()) {
             log.warn("Firebase sozlanmagan, push-notification yuborilmadi");
             return new int[]{0, 0};
@@ -59,6 +61,7 @@ public class NotificationService {
         Notification notification = buildNotification(title, body, imageUrl);
         AndroidConfig androidConfig = buildAndroidConfig(soundToUse);
         ApnsConfig apnsConfig = buildApnsConfig(soundToUse);
+        Map<String, String> data = buildData("ADMIN_PUSH", title, body, soundToUse, extraData);
 
         int successCount = 0;
         int failureCount = 0;
@@ -70,10 +73,7 @@ public class NotificationService {
                     .setNotification(notification)
                     .setAndroidConfig(androidConfig)
                     .setApnsConfig(apnsConfig)
-                    .putData("type", "ADMIN_PUSH")
-                    .putData("title", title)
-                    .putData("body", body)
-                    .putData("sound", soundToUse)
+                    .putAllData(data)
                     .addAllTokens(batch)
                     .build();
 
@@ -95,7 +95,7 @@ public class NotificationService {
     /**
      * Faqat bitta FCM tokenga test push-notification yuborish (bazadagi userlarga tegmaydi).
      */
-    public boolean sendTestNotification(String token, String title, String body, String imageUrl, String sound) {
+    public boolean sendTestNotification(String token, String title, String body, String imageUrl, String sound, Map<String, String> extraData) {
         if (FirebaseApp.getApps().isEmpty()) {
             log.warn("Firebase sozlanmagan, test push-notification yuborilmadi");
             return false;
@@ -108,10 +108,7 @@ public class NotificationService {
                 .setNotification(buildNotification(title, body, imageUrl))
                 .setAndroidConfig(buildAndroidConfig(soundToUse))
                 .setApnsConfig(buildApnsConfig(soundToUse))
-                .putData("type", "ADMIN_TEST_PUSH")
-                .putData("title", title)
-                .putData("body", body)
-                .putData("sound", soundToUse)
+                .putAllData(buildData("ADMIN_TEST_PUSH", title, body, soundToUse, extraData))
                 .build();
 
         try {
@@ -121,6 +118,26 @@ public class NotificationService {
             log.error("Test push-notification yuborishda xatolik: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Standart data-maydonlarni yig'adi, so'ng admin bergan qo'shimcha key-value
+     * juftliklarini ustiga qo'shadi (bir xil key bo'lsa, admin qiymati ustun turadi).
+     */
+    private Map<String, String> buildData(String type, String title, String body, String sound, Map<String, String> extraData) {
+        Map<String, String> data = new LinkedHashMap<>();
+        data.put("type", type);
+        data.put("title", title);
+        data.put("body", body);
+        data.put("sound", sound);
+        if (extraData != null) {
+            extraData.forEach((key, value) -> {
+                if (key != null && !key.isBlank() && value != null) {
+                    data.put(key, value);
+                }
+            });
+        }
+        return data;
     }
 
     private Notification buildNotification(String title, String body, String imageUrl) {

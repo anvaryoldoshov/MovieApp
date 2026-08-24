@@ -2,6 +2,8 @@ package com.example.movieapp.controller;
 
 import com.example.movieapp.service.FileStorageService;
 import com.example.movieapp.service.NotificationService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,7 @@ public class AdminNotificationController {
 
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -33,10 +36,18 @@ public class AdminNotificationController {
             @RequestParam("title") String title,
             @RequestParam("body") String body,
             @RequestParam(value = "sound", required = false) String sound,
-            @RequestParam(value = "image", required = false) MultipartFile image
+            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "data", required = false) String dataJson
     ) {
         if (title == null || title.isBlank() || body == null || body.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "title va body majburiy"));
+        }
+
+        Map<String, String> extraData;
+        try {
+            extraData = parseExtraData(dataJson);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "data maydoni noto'g'ri JSON formatda"));
         }
 
         String imageUrl = null;
@@ -45,7 +56,7 @@ public class AdminNotificationController {
             imageUrl = baseUrl + imagePath;
         }
 
-        int[] result = notificationService.sendCustomNotification(title, body, imageUrl, sound);
+        int[] result = notificationService.sendCustomNotification(title, body, imageUrl, sound, extraData);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Push-notification yuborildi",
@@ -61,10 +72,18 @@ public class AdminNotificationController {
             @RequestParam("title") String title,
             @RequestParam("body") String body,
             @RequestParam(value = "sound", required = false) String sound,
-            @RequestParam(value = "image", required = false) MultipartFile image
+            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "data", required = false) String dataJson
     ) {
         if (token == null || token.isBlank() || title == null || title.isBlank() || body == null || body.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "token, title va body majburiy"));
+        }
+
+        Map<String, String> extraData;
+        try {
+            extraData = parseExtraData(dataJson);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "data maydoni noto'g'ri JSON formatda"));
         }
 
         String imageUrl = null;
@@ -73,7 +92,7 @@ public class AdminNotificationController {
             imageUrl = baseUrl + imagePath;
         }
 
-        boolean sent = notificationService.sendTestNotification(token, title, body, imageUrl, sound);
+        boolean sent = notificationService.sendTestNotification(token, title, body, imageUrl, sound, extraData);
 
         if (!sent) {
             return ResponseEntity.badRequest().body(Map.of("message", "Test push yuborilmadi. Token noto'g'ri yoki Firebase sozlanmagan bo'lishi mumkin."));
@@ -85,5 +104,12 @@ public class AdminNotificationController {
     @GetMapping("/sounds")
     public ResponseEntity<List<String>> getRecentSounds() {
         return ResponseEntity.ok(notificationService.getRecentSounds());
+    }
+
+    private Map<String, String> parseExtraData(String dataJson) throws Exception {
+        if (dataJson == null || dataJson.isBlank()) {
+            return null;
+        }
+        return objectMapper.readValue(dataJson, new TypeReference<Map<String, String>>() {});
     }
 }
