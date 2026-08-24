@@ -22,6 +22,7 @@ public class Series {
 
     private String imagePath;
 
+    @Column(columnDefinition = "TEXT")
     private String title;
 
     private String status;
