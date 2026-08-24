@@ -33,7 +33,6 @@ public class SeriesService {
     private final BannerRepo bannerRepo;
     private final MovieAccessRepository movieAccessRepository;
     private final PaymentRepository paymentRepository;
-    private final NotificationService notificationService;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -72,8 +71,6 @@ public class SeriesService {
         }
 
         Series saved = seriesRepo.save(series);
-
-        notificationService.sendNewSeriesNotification(saved);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Series saved successfully", "id", saved.getId()));
     }
