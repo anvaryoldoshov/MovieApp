@@ -23,6 +23,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminNotificationController {
 
+    private static final int NOTIFICATION_IMAGE_MAX_DIMENSION = 1024; // px
+    private static final float NOTIFICATION_IMAGE_QUALITY = 0.8f;
+
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
@@ -52,7 +55,8 @@ public class AdminNotificationController {
 
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            String imagePath = fileStorageService.saveImage("notifications", image);
+            String imagePath = fileStorageService.saveCompressedImage(
+                    "notifications", image, NOTIFICATION_IMAGE_MAX_DIMENSION, NOTIFICATION_IMAGE_QUALITY);
             imageUrl = baseUrl + imagePath;
         }
 
@@ -88,7 +92,8 @@ public class AdminNotificationController {
 
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            String imagePath = fileStorageService.saveImage("notifications", image);
+            String imagePath = fileStorageService.saveCompressedImage(
+                    "notifications", image, NOTIFICATION_IMAGE_MAX_DIMENSION, NOTIFICATION_IMAGE_QUALITY);
             imageUrl = baseUrl + imagePath;
         }
 
