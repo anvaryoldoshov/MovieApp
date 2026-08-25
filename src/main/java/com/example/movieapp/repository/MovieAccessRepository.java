@@ -45,6 +45,8 @@ public interface MovieAccessRepository extends JpaRepository<MovieAccess, Long> 
 
     List<MovieAccess> findByPaidTrueAndAccessEndDateIsNotNullAndAccessEndDateBefore(java.time.LocalDate date);
 
+    List<MovieAccess> findByPaidTrueAndAccessEndDateAndReminderSentFalse(java.time.LocalDate date);
+
     @Query("SELECT m.movie.id, COUNT(DISTINCT m.user.id) FROM MovieAccess m " +
             "WHERE m.paid = true AND (m.accessEndDate IS NULL OR m.accessEndDate >= CURRENT_DATE) " +
             "GROUP BY m.movie.id")

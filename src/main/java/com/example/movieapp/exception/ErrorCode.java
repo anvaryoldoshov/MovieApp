@@ -33,6 +33,9 @@ public enum ErrorCode {
     // File (7000-7099)
     FILE_UPLOAD_FAILED(7001, "Faylni saqlashda xatolik yuz berdi"),
 
+    // Notification (8000-8099)
+    NOTIFICATION_NOT_FOUND(8001, "Notifikatsiya topilmadi"),
+
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
 

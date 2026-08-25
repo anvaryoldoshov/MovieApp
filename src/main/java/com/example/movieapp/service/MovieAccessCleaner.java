@@ -14,4 +14,9 @@ public class MovieAccessCleaner {
     public void cleanExpiredAccesses() {
         movieAccessService.removeExpiredAccesses();
     }
+
+    @Scheduled(cron = "0 0 9 * * ?")
+    public void sendExpiryReminders() {
+        movieAccessService.sendExpiryReminders();
+    }
 }

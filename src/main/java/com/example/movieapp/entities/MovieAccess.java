@@ -27,4 +27,6 @@ public class MovieAccess {
 
 
     private LocalDate accessEndDate;
+
+    private boolean reminderSent;
 }

@@ -30,6 +30,7 @@ public class MovieAccessService {
     private final MovieAccessRepository movieAccessRepository;
     private final UserRepo userRepo;
     private final SeriesRepo seriesRepo;
+    private final UserNotificationService userNotificationService;
 
     public MovieAccess giveAccess(Long userId, Long seriesId, boolean paid) {
         User user = userRepo.findById(userId)
@@ -120,6 +121,7 @@ public class MovieAccessService {
                 access.setMovie(series);
                 access.setPaid(true);
                 access.setAccessEndDate(accessEndDate); // Obuna muddatini belgilash
+                access.setReminderSent(false);
 
                 movieAccessRepository.save(access);
                 log.debug("Added/Updated access for series {} (Subscription, End Date: {})", series.getTitle(), accessEndDate);
@@ -156,6 +158,7 @@ public class MovieAccessService {
                 access.setMovie(series);
                 access.setPaid(true);
                 access.setAccessEndDate(newEndDate);
+                access.setReminderSent(false);
 
                 movieAccessRepository.save(access);
                 log.debug("Individual access updated for series {}. End Date: {}", series.getTitle(), newEndDate);
@@ -191,6 +194,7 @@ public class MovieAccessService {
         access.setMovie(series);
         access.setPaid(true);
         access.setAccessEndDate(endDate);
+        access.setReminderSent(false);
         movieAccessRepository.save(access);
 
         user.setSubscription(true);
@@ -203,6 +207,30 @@ public class MovieAccessService {
         userRepo.save(user);
 
         log.info("Pullik kirish berildi: user={}, series={}, kunlar={}", userId, seriesId, accessDays);
+    }
+
+    @Transactional
+    public void sendExpiryReminders() {
+        LocalDate targetDate = LocalDate.now().plusDays(3);
+        List<MovieAccess> expiringSoon = movieAccessRepository.findByPaidTrueAndAccessEndDateAndReminderSentFalse(targetDate);
+
+        if (expiringSoon.isEmpty()) {
+            return;
+        }
+
+        log.info("Obuna tugashiga 3 kun qolgan {} ta kirish uchun eslatma yuborilmoqda.", expiringSoon.size());
+        for (MovieAccess access : expiringSoon) {
+            userNotificationService.notifyUser(
+                    access.getUser(),
+                    "SUBSCRIPTION_EXPIRY_REMINDER",
+                    "Obunangiz tugashiga 3 kun qoldi",
+                    String.format("\"%s\" seriali uchun obunangiz %s kuni tugaydi. Uzaytirishni unutmang!",
+                            access.getMovie().getTitle(), access.getAccessEndDate()),
+                    null
+            );
+            access.setReminderSent(true);
+        }
+        movieAccessRepository.saveAll(expiringSoon);
     }
 
     public boolean canUserWatchMovie(Long userId, Long serialId) {

@@ -121,6 +121,33 @@ public class NotificationService {
     }
 
     /**
+     * Bitta foydalanuvchining qurilmasiga (FCM token) shaxsiy notifikatsiya yuborish
+     * (xarid tasdig'i, obuna muddati eslatmasi va h.k.).
+     */
+    public boolean sendToToken(String token, String type, String title, String body, String imageUrl) {
+        if (FirebaseApp.getApps().isEmpty()) {
+            log.warn("Firebase sozlanmagan, push-notification yuborilmadi");
+            return false;
+        }
+
+        Message message = Message.builder()
+                .setToken(token)
+                .setNotification(buildNotification(title, body, imageUrl))
+                .setAndroidConfig(buildAndroidConfig(DEFAULT_SOUND))
+                .setApnsConfig(buildApnsConfig(DEFAULT_SOUND))
+                .putAllData(buildData(type, title, body, DEFAULT_SOUND, null))
+                .build();
+
+        try {
+            FirebaseMessaging.getInstance().send(message);
+            return true;
+        } catch (FirebaseMessagingException e) {
+            log.error("Shaxsiy push-notification yuborishda xatolik: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Standart data-maydonlarni yig'adi, so'ng admin bergan qo'shimcha key-value
      * juftliklarini ustiga qo'shadi (bir xil key bo'lsa, admin qiymati ustun turadi).
      */

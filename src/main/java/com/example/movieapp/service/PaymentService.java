@@ -28,17 +28,20 @@ public class PaymentService {
     private final SeriesRepo seriesRepo;
     private final MovieAccessService movieAccessService;
     private final PixyService pixyService;
+    private final UserNotificationService userNotificationService;
 
     public PaymentService(PaymentRepository paymentRepository,
                           UserRepo userRepo,
                           SeriesRepo seriesRepo,
                           MovieAccessService movieAccessService,
-                          @Lazy PixyService pixyService) {
+                          @Lazy PixyService pixyService,
+                          UserNotificationService userNotificationService) {
         this.paymentRepository = paymentRepository;
         this.userRepo = userRepo;
         this.seriesRepo = seriesRepo;
         this.movieAccessService = movieAccessService;
         this.pixyService = pixyService;
+        this.userNotificationService = userNotificationService;
     }
 
     @Transactional
@@ -104,6 +107,15 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PAID);
         paymentRepository.save(payment);
         log.info("Access faollashtirildi: paymentId={}", payment.getId());
+
+        userNotificationService.notifyUser(
+                payment.getUser(),
+                "PURCHASE_SUCCESS",
+                "To'lov muvaffaqiyatli",
+                String.format("\"%s\" seriali uchun %d kunlik kirish faollashtirildi",
+                        payment.getSeries().getTitle(), payment.getSubscriptionDays()),
+                null
+        );
     }
 
     private int resolveDuration(Integer durationMonths) {
