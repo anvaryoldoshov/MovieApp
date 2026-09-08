@@ -30,4 +30,6 @@ public class SeriesDto {
 
     private Integer freeEpisodesCount; // birinchi N ta epizod obunasiz ham ochiq (null/0 = yo'q)
 
+    private String bunnyCollectionId; // Bunny Stream Collection ID yoki URL (server tomonda tozalanadi)
+
 }

@@ -8,7 +8,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/series")
@@ -111,6 +113,36 @@ public class AdminEpisodeController {
     @PostMapping("/episodes/backfill-duration")
     public ResponseEntity<?> backfillMissingDurations() {
         return ResponseEntity.ok(episodeService.backfillMissingDurations());
+    }
+
+    /**
+     * Admin videolarni oldindan Bunny'ga yuklab qo'yganda, hali hech qanday epizodga
+     * biriktirilmagan videoning URL'ini (va serialga Collection biriktirilgan bo'lsa,
+     * videoning nomidagi raqamdan aniqlangan epizod raqamini ham) taklif qiladi.
+     */
+    @GetMapping("/{seriesId}/episodes/next-video")
+    public ResponseEntity<Map<String, Object>> suggestNextVideo(@PathVariable Long seriesId) {
+        return ResponseEntity.ok(
+                episodeService.suggestNextVideo(seriesId)
+                        .<Map<String, Object>>map(v -> {
+                            Map<String, Object> body = new HashMap<>();
+                            body.put("videoUrl", v.videoUrl());
+                            if (v.episodeNumber() != null) {
+                                body.put("episodeNumber", v.episodeNumber());
+                            }
+                            return body;
+                        })
+                        .orElse(Map.of())
+        );
+    }
+
+    /**
+     * Serialga biriktirilgan Bunny Collection ichidagi hali import qilinmagan barcha
+     * videolarni bitta so'rovda epizod sifatida yaratadi.
+     */
+    @PostMapping("/{seriesId}/episodes/import-from-bunny")
+    public ResponseEntity<?> importEpisodesFromBunny(@PathVariable Long seriesId) {
+        return ResponseEntity.ok(episodeService.importEpisodesFromCollection(seriesId));
     }
 
 }

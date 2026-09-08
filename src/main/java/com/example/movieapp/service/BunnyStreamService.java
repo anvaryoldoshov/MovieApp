@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -28,6 +29,13 @@ public class BunnyStreamService {
     // https://vz-xxxxx.b-cdn.net/{videoGuid}/playlist.m3u8
     private static final Pattern VIDEO_URL_PATTERN =
             Pattern.compile("(https?://[^/]+)(/[0-9a-fA-F\\-]{36}/)");
+
+    private static final Pattern UUID_PATTERN =
+            Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
+    // Video nomining oxiridagi raqamni ajratib oladi (masalan "ayyubiy32" -> 32).
+    // Nom qismidagi imlo xatolariga (harflarga) e'tibor bermaydi - faqat oxirgi raqam muhim.
+    private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(\\d+)\\s*$");
 
     // Havola bir necha soatlik pleer sessiyasi davomida ishlashi uchun yetarli, lekin
     // taqsimlab yuborilgan holda uzoq muddat ishlamasligi uchun qisqa muddatga cheklangan.
@@ -49,6 +57,105 @@ public class BunnyStreamService {
     private String tokenAuthKey;
 
     public record BunnyVideoInfo(int durationSeconds, long sizeBytes, String thumbnailUrl) {
+    }
+
+    public record BunnyLibraryVideo(String guid, String title) {
+    }
+
+    /**
+     * Bunny Stream kutubxonasidagi (yoki collectionId berilsa, faqat shu Collection ichidagi)
+     * barcha videolarni yuklangan sana bo'yicha (eskisi birinchi) ro'yxatini qaytaradi.
+     * Epizodga hali biriktirilmagan videoni topish uchun ishlatiladi.
+     */
+    public List<BunnyLibraryVideo> listLibraryVideos(String collectionId) {
+        if (libraryId.isBlank() || apiKey.isBlank()) {
+            return List.of();
+        }
+
+        String url = apiUrl + "/" + libraryId + "/videos?page=1&itemsPerPage=1000&orderBy=date";
+        if (collectionId != null && !collectionId.isBlank()) {
+            url += "&collection=" + collectionId;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("AccessKey", apiKey);
+        headers.set("accept", "application/json");
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+            Map<?, ?> body = response.getBody();
+            Object items = body == null ? null : body.get("items");
+            if (!(items instanceof List<?> itemList)) {
+                return List.of();
+            }
+
+            return itemList.stream()
+                    .filter(Map.class::isInstance)
+                    .map(Map.class::cast)
+                    .map(item -> new BunnyLibraryVideo((String) item.get("guid"), (String) item.get("title")))
+                    .filter(v -> v.guid() != null)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Bunny kutubxonasidagi videolar ro'yxatini olishda xatolik: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * Admin Bunny Collection'ning ID'sini yoki uning dashboard havolasini kiritishi mumkin -
+     * ikkalasidan ham GUID'ni ajratib oladi. GUID formatiga mos kelmasa, kiritilgan qiymatni
+     * o'zgarishsiz qaytaradi (Bunny kelajakda boshqa ID formatidan foydalansa ham ishlashi uchun).
+     */
+    public String extractCollectionId(String input) {
+        if (input == null || input.isBlank()) {
+            return null;
+        }
+        String trimmed = input.trim();
+        Matcher matcher = UUID_PATTERN.matcher(trimmed);
+        return matcher.find() ? matcher.group() : trimmed;
+    }
+
+    /**
+     * Video nomining oxiridagi raqamni epizod raqami sifatida ajratib oladi
+     * (masalan "Ayyubiy 32" yoki "ayubiy32" -> 32). Nomning matn qismida imlo xatosi
+     * bo'lishi mumkinligi uchun faqat raqamga tayaniladi.
+     */
+    public Integer extractEpisodeNumberFromTitle(String title) {
+        if (title == null) {
+            return null;
+        }
+        Matcher matcher = TRAILING_NUMBER_PATTERN.matcher(title.trim());
+        if (!matcher.find()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Mavjud playback URL'dan Bunny CDN bazaviy manzilini (masalan https://vz-xxxxx.b-cdn.net)
+     * ajratib oladi - yangi topilgan video GUID uchun to'liq URL yasashda ishlatiladi.
+     */
+    public Optional<String> extractBaseUrl(String videoUrl) {
+        if (videoUrl == null) {
+            return Optional.empty();
+        }
+        Matcher matcher = VIDEO_URL_PATTERN.matcher(videoUrl);
+        return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
+    }
+
+    public String buildPlaybackUrl(String baseUrl, String videoGuid) {
+        return baseUrl + "/" + videoGuid + "/playlist.m3u8";
+    }
+
+    /**
+     * Video URL'dan Bunny video GUID'ini ajratib oladi (masalan mavjud epizodlar orasida
+     * qaysi Bunny videolari allaqachon ishlatilganini aniqlash uchun).
+     */
+    public String extractVideoGuid(String videoUrl) {
+        return extractVideoId(videoUrl);
     }
 
     /**

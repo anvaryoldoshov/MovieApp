@@ -34,6 +34,8 @@ public class Series {
 
     private Integer freeEpisodesCount; // birinchi N ta epizod obunasiz ham ochiq (null/0 = yo'q)
 
+    private String bunnyCollectionId; // Bunny Stream'dagi shu serialga tegishli Collection GUID'i (ixtiyoriy)
+
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Banner> banners;

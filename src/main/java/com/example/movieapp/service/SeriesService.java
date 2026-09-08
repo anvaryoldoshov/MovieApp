@@ -40,6 +40,7 @@ public class SeriesService {
     private final PaymentRepository paymentRepository;
     private final GenreRepo genreRepo;
     private final SeasonRepo seasonRepo;
+    private final BunnyStreamService bunnyStreamService;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -94,6 +95,7 @@ public class SeriesService {
 
         series.setSortOrder(seriesRepo.findMaxSortOrder() + 1);
         series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
+        series.setBunnyCollectionId(bunnyStreamService.extractCollectionId(seriesDto.getBunnyCollectionId()));
 
         Series saved = seriesRepo.save(series);
 
@@ -108,6 +110,7 @@ public class SeriesService {
             series.setMonthlyPrice(seriesDto.getMonthlyPrice());
             series.setQuarterlyPrice(seriesDto.getQuarterlyPrice());
             series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
+            series.setBunnyCollectionId(bunnyStreamService.extractCollectionId(seriesDto.getBunnyCollectionId()));
             if (seriesDto.getGenreIds() != null) {
                 series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
             }
