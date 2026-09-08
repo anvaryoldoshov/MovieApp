@@ -136,13 +136,4 @@ public class AdminEpisodeController {
         );
     }
 
-    /**
-     * Serialga biriktirilgan Bunny Collection ichidagi hali import qilinmagan barcha
-     * videolarni bitta so'rovda epizod sifatida yaratadi.
-     */
-    @PostMapping("/{seriesId}/episodes/import-from-bunny")
-    public ResponseEntity<?> importEpisodesFromBunny(@PathVariable Long seriesId) {
-        return ResponseEntity.ok(episodeService.importEpisodesFromCollection(seriesId));
-    }
-
 }
