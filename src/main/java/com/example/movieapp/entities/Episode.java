@@ -3,6 +3,7 @@ package com.example.movieapp.entities;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "episodes")
@@ -35,6 +36,7 @@ public class Episode {
 
     private Long fileSizeBytes;
 
+    @ColumnDefault("false")
     private boolean free; // true bo'lsa, obunasiz ham hamma tomosha qila oladi (bonus epizod)
 
     @ManyToOne
