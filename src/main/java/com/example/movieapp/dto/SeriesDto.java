@@ -28,4 +28,6 @@ public class SeriesDto {
     private List<Long> genreIds;   // janrlarni biriktirish uchun (create/update)
     private List<GenreDto> genres; // javobda ko'rsatish uchun
 
+    private Integer freeEpisodesCount; // birinchi N ta epizod obunasiz ham ochiq (null/0 = yo'q)
+
 }

@@ -15,4 +15,6 @@ public class SeasonDto {
 
     private String title;
 
+    private Integer episodeCount; // shu faslga rejalashtirilgan epizodlar soni (avtomatik taqsimlash uchun)
+
 }

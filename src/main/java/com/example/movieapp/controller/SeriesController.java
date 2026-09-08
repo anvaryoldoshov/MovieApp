@@ -74,6 +74,7 @@ public class SeriesController {
                                           @RequestParam(value = "monthlyPrice", required = false) Long monthlyPrice,
                                           @RequestParam(value = "quarterlyPrice", required = false) Long quarterlyPrice,
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
+                                          @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
                                           @RequestParam("image") MultipartFile image) {
         String imagePath = fileStorageService.saveImage("series", image);
 
@@ -83,6 +84,7 @@ public class SeriesController {
         dto.setMonthlyPrice(monthlyPrice);
         dto.setQuarterlyPrice(quarterlyPrice);
         dto.setGenreIds(genreIds);
+        dto.setFreeEpisodesCount(freeEpisodesCount);
         dto.setImagePath(imagePath);
 
         return seriesService.saveSeries(dto);
@@ -96,6 +98,7 @@ public class SeriesController {
                                           @RequestParam(value = "monthlyPrice", required = false) Long monthlyPrice,
                                           @RequestParam(value = "quarterlyPrice", required = false) Long quarterlyPrice,
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
+                                          @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
                                           @RequestParam(value = "image", required = false) MultipartFile image) {
 
         Optional<Series> existing = seriesRepo.findById(id);
@@ -107,6 +110,7 @@ public class SeriesController {
         dto.setMonthlyPrice(monthlyPrice);
         dto.setQuarterlyPrice(quarterlyPrice);
         dto.setGenreIds(genreIds);
+        dto.setFreeEpisodesCount(freeEpisodesCount);
 
         if (image != null && !image.isEmpty()) {
             String imagePath = fileStorageService.saveImage("series", image);

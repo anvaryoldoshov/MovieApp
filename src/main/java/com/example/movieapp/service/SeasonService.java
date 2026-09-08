@@ -40,6 +40,7 @@ public class SeasonService {
         season.setSeries(series);
         season.setSeasonNumber(dto.getSeasonNumber());
         season.setTitle(dto.getTitle());
+        season.setEpisodeCount(dto.getEpisodeCount());
 
         return seasonMapper.toDto(seasonRepo.save(season));
     }
@@ -54,6 +55,7 @@ public class SeasonService {
 
         season.setSeasonNumber(dto.getSeasonNumber());
         season.setTitle(dto.getTitle());
+        season.setEpisodeCount(dto.getEpisodeCount());
 
         return seasonMapper.toDto(seasonRepo.save(season));
     }

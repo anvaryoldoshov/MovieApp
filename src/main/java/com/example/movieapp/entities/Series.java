@@ -32,6 +32,8 @@ public class Series {
 
     private Integer sortOrder; // adminda ro'yxatdagi tartibi (kichik = birinchi)
 
+    private Integer freeEpisodesCount; // birinchi N ta epizod obunasiz ham ochiq (null/0 = yo'q)
+
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Banner> banners;

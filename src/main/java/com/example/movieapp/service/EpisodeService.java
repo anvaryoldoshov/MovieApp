@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 
 @Slf4j
@@ -31,6 +32,7 @@ public class EpisodeService {
     private final SeriesRepo seriesRepo;
     private final SeasonRepo seasonRepo;
     private final BunnyStreamService bunnyStreamService;
+    private final FileStorageService fileStorageService;
 
     public EpisodeDto getEpisodeById(Long seriesId, Long episodeId) {
 
@@ -41,14 +43,16 @@ public class EpisodeService {
             throw new EpisodeNotBelongToSeriesException();
         }
 
-        return episodeMapper.toEpisodeDto(episode);
+        EpisodeDto dto = episodeMapper.toEpisodeDto(episode);
+        dto.setFree(isEpisodeFree(episode.getSeries(), episode.getEpisodeNumber()));
+        return dto;
     }
 
-    public Episode addEpisode(Long seriesId, EpisodeDto dto) {
+    public EpisodeDto addEpisode(Long seriesId, EpisodeDto dto) {
         Series series = seriesRepo.findById(seriesId)
                 .orElseThrow(() -> new RuntimeException("Series not found"));
 
-        Season season = resolveSeason(series, dto.getSeasonId());
+        Season season = resolveSeason(series, dto.getSeasonId(), dto.getEpisodeNumber());
 
         Episode episode = Episode.builder()
                 .title(dto.getTitle())
@@ -58,48 +62,90 @@ public class EpisodeService {
                 .videoUrl(dto.getVideoUrl())
                 .series(series)
                 .season(season)
-                .free(dto.isFree())
                 .build();
 
-        applyDurationFromBunny(episode, dto.getVideoUrl());
+        Optional<BunnyStreamService.BunnyVideoInfo> bunnyInfo = applyDurationFromBunny(episode, dto.getVideoUrl());
 
-        return episodeRepo.save(episode);
+        // Admin thumbnail yuklamagan bo'lsa, Bunny avtomatik yaratgan thumbnaildan foydalanamiz
+        if ((episode.getThumbnail() == null || episode.getThumbnail().isBlank())) {
+            bunnyInfo.map(BunnyStreamService.BunnyVideoInfo::thumbnailUrl)
+                    .filter(url -> url != null && !url.isBlank())
+                    .map(url -> fileStorageService.saveImageFromUrl("episodes", url))
+                    .ifPresent(episode::setThumbnail);
+        }
+
+        Episode saved = episodeRepo.save(episode);
+
+        EpisodeDto resultDto = episodeMapper.toEpisodeDto(saved);
+        resultDto.setFree(isEpisodeFree(series, saved.getEpisodeNumber()));
+        return resultDto;
     }
 
     /**
-     * seasonId ko'rsatilmagan bo'lsa (masalan eski admin so'rovlari), serialning
-     * standart "1-fasl"ini topib yoki yaratib qaytaradi.
+     * Fasl admin tomonidan aniq ko'rsatilmagan bo'lsa, epizod raqami va serialdagi fasllarning
+     * rejalashtirilgan sig'imiga (episodeCount) qarab avtomatik tanlaydi: masalan 1-fasl=30,
+     * 2-fasl=10 deb belgilangan bo'lsa, 31-epizod avtomatik 2-faslga tushadi. Hech qanday fasl
+     * mavjud bo'lmasa, standart "1-fasl" yaratiladi.
      */
-    private Season resolveSeason(Series series, Long seasonId) {
-        if (seasonId != null) {
-            Season season = seasonRepo.findById(seasonId).orElseThrow(SeasonNotFoundException::new);
+    private Season resolveSeason(Series series, Long explicitSeasonId, Integer episodeNumber) {
+        if (explicitSeasonId != null) {
+            Season season = seasonRepo.findById(explicitSeasonId).orElseThrow(SeasonNotFoundException::new);
             if (!season.getSeries().getId().equals(series.getId())) {
                 throw new SeasonNotFoundException();
             }
             return season;
         }
 
-        return seasonRepo.findBySeries_IdAndSeasonNumber(series.getId(), 1).orElseGet(() -> {
+        List<Season> seasons = seasonRepo.findBySeries_IdOrderBySeasonNumberAsc(series.getId());
+        if (seasons.isEmpty()) {
             Season newSeason = new Season();
             newSeason.setSeries(series);
             newSeason.setSeasonNumber(1);
             newSeason.setTitle("1-fasl");
             return seasonRepo.save(newSeason);
-        });
+        }
+
+        if (episodeNumber == null) {
+            return seasons.get(0);
+        }
+
+        int cumulative = 0;
+        for (Season season : seasons) {
+            Integer capacity = season.getEpisodeCount();
+            if (capacity == null || capacity <= 0) {
+                // Sig'imi belgilanmagan fasl - shu nuqtadan keyingi hamma epizod shu faslga tushadi
+                return season;
+            }
+            cumulative += capacity;
+            if (episodeNumber <= cumulative) {
+                return season;
+            }
+        }
+
+        // Barcha fasllarning belgilangan sig'imidan oshib ketdi - oxirgi faslga qo'shiladi
+        return seasons.get(seasons.size() - 1);
     }
 
-    private boolean applyDurationFromBunny(Episode episode, String videoUrl) {
-        return bunnyStreamService.fetchVideoInfo(videoUrl).map(info -> {
+    /**
+     * Serialda "birinchi N ta epizod bepul" siyosati belgilangan bo'lsa, epizod raqamiga
+     * qarab bepul-emasligini hisoblaydi. Bu holat saqlanmaydi - har doim jonli hisoblanadi,
+     * shuning uchun freeEpisodesCount o'zgarganda barcha epizodlar uchun avtomatik yangilanadi.
+     */
+    private boolean isEpisodeFree(Series series, Integer episodeNumber) {
+        Integer freeCount = series.getFreeEpisodesCount();
+        return episodeNumber != null && freeCount != null && episodeNumber <= freeCount;
+    }
+
+    private Optional<BunnyStreamService.BunnyVideoInfo> applyDurationFromBunny(Episode episode, String videoUrl) {
+        Optional<BunnyStreamService.BunnyVideoInfo> infoOpt = bunnyStreamService.fetchVideoInfo(videoUrl);
+        infoOpt.ifPresentOrElse(info -> {
             int totalSeconds = info.durationSeconds();
             episode.setDurationHours(totalSeconds / 3600);
             episode.setDurationMinutes((totalSeconds % 3600) / 60);
             episode.setDurationSeconds(totalSeconds % 60);
             episode.setFileSizeBytes(info.sizeBytes());
-            return true;
-        }).orElseGet(() -> {
-            log.warn("Episode uchun Bunny'dan video ma'lumoti olinmadi, videoUrl={}", videoUrl);
-            return false;
-        });
+        }, () -> log.warn("Episode uchun Bunny'dan video ma'lumoti olinmadi, videoUrl={}", videoUrl));
+        return infoOpt;
     }
 
     /**
@@ -112,7 +158,7 @@ public class EpisodeService {
         int updated = 0;
         int failed = 0;
         for (Episode episode : episodes) {
-            if (applyDurationFromBunny(episode, episode.getVideoUrl())) {
+            if (applyDurationFromBunny(episode, episode.getVideoUrl()).isPresent()) {
                 episodeRepo.save(episode);
                 updated++;
             } else {
@@ -157,25 +203,30 @@ public class EpisodeService {
                     // Video URL mavjud bo'lsa yangilanadi, davomiylik Bunny'dan qayta olinadi
                     if (dto.getVideoUrl() != null && !dto.getVideoUrl().isBlank()) {
                         episode.setVideoUrl(dto.getVideoUrl());
-                        applyDurationFromBunny(episode, dto.getVideoUrl());
+                        Optional<BunnyStreamService.BunnyVideoInfo> bunnyInfo = applyDurationFromBunny(episode, dto.getVideoUrl());
+
+                        // Admin yangi thumbnail yuklamagan bo'lsa, yangi video uchun Bunny thumbnaili olinadi
+                        if (dto.getThumbnail() == null || dto.getThumbnail().isBlank()) {
+                            bunnyInfo.map(BunnyStreamService.BunnyVideoInfo::thumbnailUrl)
+                                    .filter(url -> url != null && !url.isBlank())
+                                    .map(url -> fileStorageService.saveImageFromUrl("episodes", url))
+                                    .ifPresent(episode::setThumbnail);
+                        }
                     }
 
-                    // Faslni ko'chirish (boshqa faslga)
-                    if (dto.getSeasonId() != null) {
-                        Season season = seasonRepo.findById(dto.getSeasonId())
-                                .orElseThrow(SeasonNotFoundException::new);
-                        if (!season.getSeries().getId().equals(episode.getSeries().getId())) {
-                            throw new SeasonNotFoundException();
-                        }
+                    // Fasl: admin aniq ko'rsatsa o'shanga, aks holda (yoki epizod raqami o'zgargan bo'lsa)
+                    // sig'imga qarab avtomatik qayta hisoblanadi
+                    if (dto.getSeasonId() != null || dto.getEpisodeNumber() != null) {
+                        Season season = resolveSeason(episode.getSeries(), dto.getSeasonId(), episode.getEpisodeNumber());
                         episode.setSeason(season);
                     }
 
-                    // Bonus/bepul epizod belgisi
-                    episode.setFree(dto.isFree());
-
                     Episode updated = episodeRepo.save(episode);
 
-                    return ResponseEntity.ok(episodeMapper.toEpisodeDto(updated));
+                    EpisodeDto resultDto = episodeMapper.toEpisodeDto(updated);
+                    resultDto.setFree(isEpisodeFree(updated.getSeries(), updated.getEpisodeNumber()));
+
+                    return ResponseEntity.ok(resultDto);
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
@@ -193,7 +244,11 @@ public class EpisodeService {
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
 
         return episodes.stream()
-                .map(episodeMapper::toEpisodeDto)
+                .map(episode -> {
+                    EpisodeDto dto = episodeMapper.toEpisodeDto(episode);
+                    dto.setFree(isEpisodeFree(episode.getSeries(), episode.getEpisodeNumber()));
+                    return dto;
+                })
                 .toList();
     }
 

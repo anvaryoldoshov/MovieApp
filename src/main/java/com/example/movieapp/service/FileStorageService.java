@@ -1,8 +1,11 @@
 package com.example.movieapp.service;
 
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.IIOImage;
@@ -20,8 +23,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class FileStorageService {
+
+    private final RestTemplate restTemplate;
 
     @Value("${app.upload.dir}")
     private String uploadRootDir;
@@ -40,6 +47,35 @@ public class FileStorageService {
             return "/uploads/" + type + "/" + filename;
         } catch (IOException e) {
             throw new RuntimeException("Rasmni saqlab bo‘lmadi: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Tashqi manzildan (masalan Bunny Stream avtomatik yaratgan thumbnail) rasmni yuklab olib,
+     * o'zimizning serverga saqlaydi. Muvaffaqiyatsiz bo'lsa null qaytaradi (chaqiruvchi tomon
+     * buni ixtiyoriy - masalan admin qo'lda rasm yuklamagan bo'lsa - fallback sifatida ishlatadi).
+     */
+    public String saveImageFromUrl(String type, String sourceUrl) {
+        try {
+            Path uploadPath = Paths.get(uploadRootDir, type);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            byte[] bytes = restTemplate.getForObject(sourceUrl, byte[].class);
+            if (bytes == null || bytes.length == 0) {
+                log.warn("Tashqi manzildan rasm bo'sh qaytdi: {}", sourceUrl);
+                return null;
+            }
+
+            String filename = System.currentTimeMillis() + "_thumbnail.jpg";
+            Path filePath = uploadPath.resolve(filename);
+            Files.write(filePath, bytes);
+
+            return "/uploads/" + type + "/" + filename;
+        } catch (Exception e) {
+            log.warn("Tashqi manzildan rasm yuklab olinmadi ({}): {}", sourceUrl, e.getMessage());
+            return null;
         }
     }
 

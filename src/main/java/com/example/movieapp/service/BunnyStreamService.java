@@ -48,11 +48,13 @@ public class BunnyStreamService {
     @Value("${bunny.stream.token-auth-key:}")
     private String tokenAuthKey;
 
-    public record BunnyVideoInfo(int durationSeconds, long sizeBytes) {
+    public record BunnyVideoInfo(int durationSeconds, long sizeBytes, String thumbnailUrl) {
     }
 
     /**
-     * Bunny Stream API orqali video haqida ma'lumot oladi: davomiylik (soniya) va hajm (bayt).
+     * Bunny Stream API orqali video haqida ma'lumot oladi: davomiylik (soniya), hajm (bayt)
+     * va Bunny avtomatik yaratgan thumbnail (muddati cheklangan token bilan imzolangan,
+     * faqat bir martalik yuklab olish uchun - o'zimizning serverga saqlab qo'yiladi).
      * Sozlamalar yo'q yoki so'rov muvaffaqiyatsiz bo'lsa, bo'sh Optional qaytaradi.
      */
     public Optional<BunnyVideoInfo> fetchVideoInfo(String videoUrl) {
@@ -88,11 +90,24 @@ public class BunnyStreamService {
                 return Optional.empty();
             }
 
-            return Optional.of(new BunnyVideoInfo(durationSeconds, sizeBytes));
+            String thumbnailFileName = (String) body.get("thumbnailFileName");
+            String thumbnailUrl = buildThumbnailUrl(videoUrl, videoId, thumbnailFileName);
+
+            return Optional.of(new BunnyVideoInfo(durationSeconds, sizeBytes, thumbnailUrl));
         } catch (Exception e) {
             log.error("Bunny Stream API'ga murojaat xatosi (videoId={}): {}", videoId, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private String buildThumbnailUrl(String videoUrl, String videoId, String thumbnailFileName) {
+        Matcher matcher = VIDEO_URL_PATTERN.matcher(videoUrl);
+        if (!matcher.find()) {
+            return null;
+        }
+        String baseUrl = matcher.group(1);
+        String fileName = (thumbnailFileName == null || thumbnailFileName.isBlank()) ? "thumbnail.jpg" : thumbnailFileName;
+        return signPlaybackUrl(baseUrl + "/" + videoId + "/" + fileName);
     }
 
     /**

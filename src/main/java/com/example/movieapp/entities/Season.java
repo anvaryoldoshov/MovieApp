@@ -24,4 +24,6 @@ public class Season {
 
     private String title; // ixtiyoriy, masalan "Maxsus qism" (bo'sh bo'lsa "N-fasl" ko'rsatiladi)
 
+    private Integer episodeCount; // shu faslga rejalashtirilgan epizodlar soni (avtomatik taqsimlash uchun; null/0 = cheklanmagan)
+
 }

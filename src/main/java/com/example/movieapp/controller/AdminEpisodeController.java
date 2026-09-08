@@ -1,8 +1,6 @@
 package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
-import com.example.movieapp.entities.Episode;
-import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.service.EpisodeService;
 import com.example.movieapp.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +16,6 @@ import java.util.List;
 public class AdminEpisodeController {
 
     private final EpisodeService episodeService;
-    private final EpisodeMapper episodeMapper;
     private final FileStorageService fileStorageService;
 
 
@@ -36,17 +33,17 @@ public class AdminEpisodeController {
             @RequestParam("videoUrl") String videoUrl,
             @RequestParam("episodeNumber") Integer episodeNumber,
             @RequestParam(value = "seasonId", required = false) Long seasonId,
-            @RequestParam(value = "free", defaultValue = "false") boolean free,
-            @RequestParam("image") MultipartFile image
+            @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         // Simple validation
-        if (title == null || title.isBlank() || videoUrl == null || videoUrl.isBlank() || image.isEmpty()) {
+        if (title == null || title.isBlank() || videoUrl == null || videoUrl.isBlank()) {
             return ResponseEntity.badRequest().body("Missing required fields");
         }
 
-        // Save image
-        String imagePath = fileStorageService.saveImage("episodes", image);
-
+        // Rasm qo'lda yuklansa saqlanadi; aks holda EpisodeService Bunny'dan avtomatik thumbnail oladi
+        String imagePath = (image != null && !image.isEmpty())
+                ? fileStorageService.saveImage("episodes", image)
+                : null;
 
         // Create DTO
         EpisodeDto episodeDto = new EpisodeDto();
@@ -57,11 +54,9 @@ public class AdminEpisodeController {
         episodeDto.setVideoUrl(videoUrl);
         episodeDto.setFileName(title);
         episodeDto.setSeasonId(seasonId);
-        episodeDto.setFree(free);
 
-        // Save and return
-        Episode saved = episodeService.addEpisode(seriesId, episodeDto);
-        return ResponseEntity.ok(episodeMapper.toEpisodeDto(saved));
+        // Fasl va bonus/bepul holati serverda avtomatik hisoblanadi (epizod raqami asosida)
+        return ResponseEntity.ok(episodeService.addEpisode(seriesId, episodeDto));
     }
 
 
@@ -88,7 +83,6 @@ public class AdminEpisodeController {
             @RequestParam("episodeNumber") Integer episodeNumber,
             @RequestParam("videoUrl") String videoUrl,
             @RequestParam(value = "seasonId", required = false) Long seasonId,
-            @RequestParam(value = "free", defaultValue = "false") boolean free,
             @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         String imagePath = null;
@@ -101,7 +95,6 @@ public class AdminEpisodeController {
         episodeDto.setEpisodeNumber(episodeNumber);
         episodeDto.setVideoUrl(videoUrl);
         episodeDto.setSeasonId(seasonId);
-        episodeDto.setFree(free);
 
         if (imagePath != null) {
             episodeDto.setThumbnail(imagePath);

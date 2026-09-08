@@ -68,8 +68,15 @@ public class SeriesService {
 
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
         List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
-        // Bonus/bepul epizodlar obunasiz ham ochiq bo'lishi kerak
-        parts.forEach(part -> part.setHasAccess(hasAccess || part.isFree()));
+
+        // Bonus/bepul epizodlar (serialda "birinchi N ta epizod bepul" siyosati bo'yicha) obunasiz ham ochiq
+        Integer freeCount = series.getFreeEpisodesCount();
+        for (int i = 0; i < parts.size(); i++) {
+            EpisodePartDto part = parts.get(i);
+            boolean isFree = freeCount != null && part.getEpisodeNumber() <= freeCount;
+            part.setFree(isFree);
+            part.setHasAccess(hasAccess || isFree);
+        }
 
         return GetDetailsResponse.builder().id(series.getId()).title(series.getTitle()).parts(parts).hasAccess(hasAccess).build();
     }
@@ -86,6 +93,7 @@ public class SeriesService {
         }
 
         series.setSortOrder(seriesRepo.findMaxSortOrder() + 1);
+        series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
 
         Series saved = seriesRepo.save(series);
 
@@ -99,6 +107,7 @@ public class SeriesService {
             series.setImagePath(seriesDto.getImagePath());
             series.setMonthlyPrice(seriesDto.getMonthlyPrice());
             series.setQuarterlyPrice(seriesDto.getQuarterlyPrice());
+            series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
             if (seriesDto.getGenreIds() != null) {
                 series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
             }
