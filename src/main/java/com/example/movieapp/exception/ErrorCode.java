@@ -36,6 +36,10 @@ public enum ErrorCode {
     // Notification (8000-8099)
     NOTIFICATION_NOT_FOUND(8001, "Notifikatsiya topilmadi"),
 
+    // Genre (10000-10099)
+    GENRE_NOT_FOUND(10001, "Janr topilmadi"),
+    GENRE_ALREADY_EXISTS(10002, "Bu nomdagi janr allaqachon mavjud"),
+
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
 

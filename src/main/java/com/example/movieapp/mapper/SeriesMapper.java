@@ -7,17 +7,19 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = GenreMapper.class)
 public interface SeriesMapper {
 
     @Mapping(target = "hasAccess", ignore = true)
     @Mapping(target = "hasEpisode", ignore = true)
     @Mapping(target = "monthlyPrice", source = "monthlyPrice")
     @Mapping(target = "quarterlyPrice", source = "quarterlyPrice")
+    @Mapping(target = "genreIds", ignore = true)
     SeriesDto toDto(Series series);
 
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "episodes", ignore = true)
+    @Mapping(target = "genres", ignore = true)
     Series toEntity(SeriesDto dto);
 
     @Named("seriesDtoToEntityById")

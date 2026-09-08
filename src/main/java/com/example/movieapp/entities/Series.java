@@ -38,4 +38,12 @@ public class Series {
     @JsonManagedReference
     private List<Episode> episodes;
 
+    @ManyToMany
+    @JoinTable(
+            name = "series_genres",
+            joinColumns = @JoinColumn(name = "series_id"),
+            inverseJoinColumns = @JoinColumn(name = "genre_id")
+    )
+    private List<Genre> genres;
+
 }

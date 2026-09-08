@@ -10,6 +10,7 @@ import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.repository.BannerRepo;
 import com.example.movieapp.repository.EpisodeRepo;
+import com.example.movieapp.repository.GenreRepo;
 import com.example.movieapp.repository.MovieAccessRepository;
 import com.example.movieapp.repository.PaymentRepository;
 import com.example.movieapp.repository.SeriesRepo;
@@ -36,6 +37,7 @@ public class SeriesService {
     private final BannerRepo bannerRepo;
     private final MovieAccessRepository movieAccessRepository;
     private final PaymentRepository paymentRepository;
+    private final GenreRepo genreRepo;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -74,6 +76,10 @@ public class SeriesService {
             series.setImagePath(seriesDto.getImagePath());
         }
 
+        if (seriesDto.getGenreIds() != null) {
+            series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
+        }
+
         Series saved = seriesRepo.save(series);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Series saved successfully", "id", saved.getId()));
@@ -86,6 +92,9 @@ public class SeriesService {
             series.setImagePath(seriesDto.getImagePath());
             series.setMonthlyPrice(seriesDto.getMonthlyPrice());
             series.setQuarterlyPrice(seriesDto.getQuarterlyPrice());
+            if (seriesDto.getGenreIds() != null) {
+                series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
+            }
             Series updated = seriesRepo.save(series);
 
             Map<String, Object> response = new HashMap<>();
