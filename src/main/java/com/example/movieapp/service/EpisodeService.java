@@ -2,11 +2,14 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.entities.Episode;
+import com.example.movieapp.entities.Season;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.repository.EpisodeRepo;
+import com.example.movieapp.repository.SeasonRepo;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.exception.EpisodeNotBelongToSeriesException;
+import com.example.movieapp.exception.SeasonNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,6 +29,7 @@ public class EpisodeService {
     private final EpisodeRepo episodeRepo;
     private final EpisodeMapper episodeMapper;
     private final SeriesRepo seriesRepo;
+    private final SeasonRepo seasonRepo;
     private final BunnyStreamService bunnyStreamService;
 
     public EpisodeDto getEpisodeById(Long seriesId, Long episodeId) {
@@ -44,6 +48,8 @@ public class EpisodeService {
         Series series = seriesRepo.findById(seriesId)
                 .orElseThrow(() -> new RuntimeException("Series not found"));
 
+        Season season = resolveSeason(series, dto.getSeasonId());
+
         Episode episode = Episode.builder()
                 .title(dto.getTitle())
                 .episodeNumber(dto.getEpisodeNumber())
@@ -51,11 +57,35 @@ public class EpisodeService {
                 .fileName(dto.getFileName())
                 .videoUrl(dto.getVideoUrl())
                 .series(series)
+                .season(season)
+                .free(dto.isFree())
                 .build();
 
         applyDurationFromBunny(episode, dto.getVideoUrl());
 
         return episodeRepo.save(episode);
+    }
+
+    /**
+     * seasonId ko'rsatilmagan bo'lsa (masalan eski admin so'rovlari), serialning
+     * standart "1-fasl"ini topib yoki yaratib qaytaradi.
+     */
+    private Season resolveSeason(Series series, Long seasonId) {
+        if (seasonId != null) {
+            Season season = seasonRepo.findById(seasonId).orElseThrow(SeasonNotFoundException::new);
+            if (!season.getSeries().getId().equals(series.getId())) {
+                throw new SeasonNotFoundException();
+            }
+            return season;
+        }
+
+        return seasonRepo.findBySeries_IdAndSeasonNumber(series.getId(), 1).orElseGet(() -> {
+            Season newSeason = new Season();
+            newSeason.setSeries(series);
+            newSeason.setSeasonNumber(1);
+            newSeason.setTitle("1-fasl");
+            return seasonRepo.save(newSeason);
+        });
     }
 
     private boolean applyDurationFromBunny(Episode episode, String videoUrl) {
@@ -100,7 +130,7 @@ public class EpisodeService {
 
     // EpisodeService.java
 
-    public ResponseEntity<Map<String, Object>> updateEpisode(Long episodeId, EpisodeDto dto) {
+    public ResponseEntity<EpisodeDto> updateEpisode(Long episodeId, EpisodeDto dto) {
         return episodeRepo.findById(episodeId)
                 .map(episode -> {
                     // Sarlavha (Title) mavjud bo'lsa yangilanadi
@@ -130,18 +160,24 @@ public class EpisodeService {
                         applyDurationFromBunny(episode, dto.getVideoUrl());
                     }
 
-                    episodeRepo.save(episode);
+                    // Faslni ko'chirish (boshqa faslga)
+                    if (dto.getSeasonId() != null) {
+                        Season season = seasonRepo.findById(dto.getSeasonId())
+                                .orElseThrow(SeasonNotFoundException::new);
+                        if (!season.getSeries().getId().equals(episode.getSeries().getId())) {
+                            throw new SeasonNotFoundException();
+                        }
+                        episode.setSeason(season);
+                    }
 
-                    // Javob xabarini qaytarish
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("message", "Episode muvaffaqiyatli yangilandi");
-                    response.put("id", episode.getId());
-                    // Yangilangan DTO ni qaytarish ham mumkin:
-                    // response.put("episode", episodeMapper.toEpisodeDto(episode));
+                    // Bonus/bepul epizod belgisi
+                    episode.setFree(dto.isFree());
 
-                    return ResponseEntity.ok(response);
+                    Episode updated = episodeRepo.save(episode);
+
+                    return ResponseEntity.ok(episodeMapper.toEpisodeDto(updated));
                 })
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Episode topilmadi")));
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
 

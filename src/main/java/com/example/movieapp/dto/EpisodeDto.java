@@ -28,4 +28,10 @@ public class EpisodeDto {
 
     private boolean hasAccess;
 
+    private boolean free; // true bo'lsa, obunasiz ham hamma tomosha qila oladi (bonus epizod)
+
+    private Long seasonId;
+
+    private Integer seasonNumber;
+
 }

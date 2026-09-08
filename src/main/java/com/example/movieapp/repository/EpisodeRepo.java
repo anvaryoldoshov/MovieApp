@@ -14,4 +14,8 @@ public interface EpisodeRepo extends JpaRepository<Episode,Long> {
     List<Episode> findByDurationMinutesIsNull();
 
     List<Episode> findByDurationMinutesIsNullOrFileSizeBytesIsNull();
+
+    boolean existsBySeasonId(Long seasonId);
+
+    List<Episode> findBySeasonIsNull();
 }

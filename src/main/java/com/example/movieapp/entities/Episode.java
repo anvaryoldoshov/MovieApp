@@ -35,8 +35,14 @@ public class Episode {
 
     private Long fileSizeBytes;
 
+    private boolean free; // true bo'lsa, obunasiz ham hamma tomosha qila oladi (bonus epizod)
+
     @ManyToOne
     @JoinColumn(name = "series_id")
     @JsonBackReference
     private Series series;
+
+    @ManyToOne
+    @JoinColumn(name = "season_id")
+    private Season season;
 }

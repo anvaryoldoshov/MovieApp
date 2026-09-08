@@ -35,6 +35,8 @@ public class AdminEpisodeController {
             @RequestParam("title") String title,
             @RequestParam("videoUrl") String videoUrl,
             @RequestParam("episodeNumber") Integer episodeNumber,
+            @RequestParam(value = "seasonId", required = false) Long seasonId,
+            @RequestParam(value = "free", defaultValue = "false") boolean free,
             @RequestParam("image") MultipartFile image
     ) {
         // Simple validation
@@ -54,6 +56,8 @@ public class AdminEpisodeController {
         episodeDto.setThumbnail(imagePath);
         episodeDto.setVideoUrl(videoUrl);
         episodeDto.setFileName(title);
+        episodeDto.setSeasonId(seasonId);
+        episodeDto.setFree(free);
 
         // Save and return
         Episode saved = episodeService.addEpisode(seriesId, episodeDto);
@@ -83,6 +87,8 @@ public class AdminEpisodeController {
             @RequestParam("title") String title,
             @RequestParam("episodeNumber") Integer episodeNumber,
             @RequestParam("videoUrl") String videoUrl,
+            @RequestParam(value = "seasonId", required = false) Long seasonId,
+            @RequestParam(value = "free", defaultValue = "false") boolean free,
             @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         String imagePath = null;
@@ -94,6 +100,8 @@ public class AdminEpisodeController {
         episodeDto.setTitle(title);
         episodeDto.setEpisodeNumber(episodeNumber);
         episodeDto.setVideoUrl(videoUrl);
+        episodeDto.setSeasonId(seasonId);
+        episodeDto.setFree(free);
 
         if (imagePath != null) {
             episodeDto.setThumbnail(imagePath);

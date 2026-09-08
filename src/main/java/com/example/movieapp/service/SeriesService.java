@@ -8,11 +8,13 @@ import com.example.movieapp.entities.Series;
 import com.example.movieapp.exception.SeriesHasActiveSubscribersException;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.mapper.SeriesMapper;
+import com.example.movieapp.dto.EpisodePartDto;
 import com.example.movieapp.repository.BannerRepo;
 import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.GenreRepo;
 import com.example.movieapp.repository.MovieAccessRepository;
 import com.example.movieapp.repository.PaymentRepository;
+import com.example.movieapp.repository.SeasonRepo;
 import com.example.movieapp.repository.SeriesRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class SeriesService {
     private final MovieAccessRepository movieAccessRepository;
     private final PaymentRepository paymentRepository;
     private final GenreRepo genreRepo;
+    private final SeasonRepo seasonRepo;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -64,8 +67,11 @@ public class SeriesService {
         Series series = seriesRepo.findById(seriesId).orElseThrow(() -> new RuntimeException("Series not found"));
 
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
+        List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
+        // Bonus/bepul epizodlar obunasiz ham ochiq bo'lishi kerak
+        parts.forEach(part -> part.setHasAccess(hasAccess || part.isFree()));
 
-        return GetDetailsResponse.builder().id(series.getId()).title(series.getTitle()).parts(episodeMapper.toPartDtoList(episodes)).hasAccess(hasAccess).build();
+        return GetDetailsResponse.builder().id(series.getId()).title(series.getTitle()).parts(parts).hasAccess(hasAccess).build();
     }
 
     public ResponseEntity<Map<String, Object>> saveSeries(SeriesDto seriesDto) {
@@ -134,6 +140,9 @@ public class SeriesService {
         movieAccessRepository.deleteByMovie_Id(seriesId);
         bannerRepo.deleteBySeriesId(seriesId);
         paymentRepository.detachSeries(seriesId);
+        // Epizodlar avval o'chirilishi kerak, chunki ular fasllarga bog'langan (FK)
+        episodeRepo.deleteAll(episodeRepo.findBySeriesId(seriesId));
+        seasonRepo.deleteBySeries_Id(seriesId);
         seriesRepo.deleteById(seriesId);
         return ResponseEntity.ok().build();
     }

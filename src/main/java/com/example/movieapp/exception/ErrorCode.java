@@ -40,6 +40,11 @@ public enum ErrorCode {
     GENRE_NOT_FOUND(10001, "Janr topilmadi"),
     GENRE_ALREADY_EXISTS(10002, "Bu nomdagi janr allaqachon mavjud"),
 
+    // Season (11000-11099)
+    SEASON_NOT_FOUND(11001, "Fasl topilmadi"),
+    SEASON_HAS_EPISODES(11002, "Bu faslda epizodlar mavjud, avval ularni o'chiring yoki boshqa faslga ko'chiring"),
+    SEASON_ALREADY_EXISTS(11003, "Bu raqamli fasl allaqachon mavjud"),
+
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
 

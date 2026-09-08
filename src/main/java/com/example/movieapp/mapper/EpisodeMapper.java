@@ -14,9 +14,15 @@ public interface EpisodeMapper {
     @Mapping(source = "series.id", target = "seriesId")
     @Mapping(target = "hasAccess", ignore = true)
     @Mapping(target = "fileSizeMb", expression = "java(episode.getFileSizeBytes() == null ? null : episode.getFileSizeBytes() / (1024.0 * 1024.0))")
+    @Mapping(source = "season.id", target = "seasonId")
+    @Mapping(source = "season.seasonNumber", target = "seasonNumber")
     EpisodeDto toEpisodeDto(Episode episode);
 
     @Mapping(source = "id", target = "episodeId")
+    @Mapping(target = "hasAccess", ignore = true)
+    @Mapping(source = "season.id", target = "seasonId")
+    @Mapping(source = "season.seasonNumber", target = "seasonNumber")
+    @Mapping(source = "season.title", target = "seasonTitle")
     EpisodePartDto toPartDto(Episode episode);
 
     List<EpisodePartDto> toPartDtoList(List<Episode> episodes);

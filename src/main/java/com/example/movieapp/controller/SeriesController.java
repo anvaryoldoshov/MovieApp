@@ -51,7 +51,7 @@ public class SeriesController {
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
         EpisodeDto episode = episodeService.getEpisodeById(serialId, episodeId);
-        episodeService.finalizeVideoUrlForAccess(episode, canWatch);
+        episodeService.finalizeVideoUrlForAccess(episode, canWatch || episode.isFree());
         return ResponseEntity.ok(episode);
     }
 
