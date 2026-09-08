@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -310,6 +311,86 @@ public class EpisodeService {
                 .filter(v -> !usedGuids.contains(v.guid()))
                 .findFirst()
                 .map(v -> new VideoSuggestion(bunnyStreamService.buildPlaybackUrl(baseUrl.get(), v.guid()), null));
+    }
+
+    /**
+     * Serialga biriktirilgan Bunny Collection ichidagi hali import qilinmagan barcha
+     * videolarni epizod sifatida yaratadi. Epizod raqami videoning nomidagi oxirgi
+     * raqamdan olinadi (masalan "Ayyubiy 32" -> 32); raqam topilmasa, o'sha video
+     * o'tkazib yuboriladi (admin uni qo'lda tekshirishi kerak bo'ladi).
+     */
+    public Map<String, Object> importEpisodesFromCollection(Long seriesId) {
+        Series series = seriesRepo.findById(seriesId)
+                .orElseThrow(() -> new RuntimeException("Series not found"));
+
+        String collectionId = series.getBunnyCollectionId();
+        if (collectionId == null || collectionId.isBlank()) {
+            throw new IllegalStateException("Bu serial uchun Bunny Collection ID belgilanmagan");
+        }
+
+        List<Episode> allEpisodes = episodeRepo.findAll();
+
+        Set<String> usedGuids = allEpisodes.stream()
+                .map(Episode::getVideoUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .map(bunnyStreamService::extractVideoGuid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Optional<String> baseUrlOpt = allEpisodes.stream()
+                .map(Episode::getVideoUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .map(bunnyStreamService::extractBaseUrl)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
+
+        Map<String, Object> result = new HashMap<>();
+        if (baseUrlOpt.isEmpty()) {
+            result.put("imported", 0);
+            result.put("error", "Bunny CDN manzilini aniqlash uchun kamida bitta mavjud epizod kerak");
+            return result;
+        }
+        String baseUrl = baseUrlOpt.get();
+
+        List<BunnyStreamService.BunnyLibraryVideo> videos = bunnyStreamService.listLibraryVideos(collectionId);
+
+        List<BunnyStreamService.BunnyLibraryVideo> toImport = new ArrayList<>();
+        int skippedAlreadyUsed = 0;
+        int skippedNoNumber = 0;
+        for (BunnyStreamService.BunnyLibraryVideo v : videos) {
+            if (usedGuids.contains(v.guid())) {
+                skippedAlreadyUsed++;
+                continue;
+            }
+            if (bunnyStreamService.extractEpisodeNumberFromTitle(v.title()) == null) {
+                skippedNoNumber++;
+                continue;
+            }
+            toImport.add(v);
+        }
+        toImport.sort(Comparator.comparing(v -> bunnyStreamService.extractEpisodeNumberFromTitle(v.title())));
+
+        int imported = 0;
+        for (BunnyStreamService.BunnyLibraryVideo v : toImport) {
+            Integer number = bunnyStreamService.extractEpisodeNumberFromTitle(v.title());
+            String videoUrl = bunnyStreamService.buildPlaybackUrl(baseUrl, v.guid());
+
+            EpisodeDto dto = new EpisodeDto();
+            dto.setTitle(series.getTitle() + " - " + number + "-qism");
+            dto.setEpisodeNumber(number);
+            dto.setVideoUrl(videoUrl);
+            dto.setFileName(dto.getTitle());
+
+            addEpisode(seriesId, dto);
+            imported++;
+        }
+
+        result.put("imported", imported);
+        result.put("skippedAlreadyUsed", skippedAlreadyUsed);
+        result.put("skippedNoNumber", skippedNoNumber);
+        result.put("total", videos.size());
+        return result;
     }
 
     /**
