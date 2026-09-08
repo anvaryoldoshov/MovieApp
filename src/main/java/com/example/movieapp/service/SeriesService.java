@@ -20,7 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +49,7 @@ public class SeriesService {
 
 
     public ResponseEntity<List<SeriesDto>> findAll(boolean includeHidden) {
-        List<SeriesDto> series = seriesRepo.findAll().stream()
+        List<SeriesDto> series = seriesRepo.findAllByOrderBySortOrderAscIdAsc().stream()
                 .filter(s -> includeHidden || !REMOVED_STATUS.equals(s.getStatus()))
                 .map(s -> {
                     SeriesDto dto = seriesMapper.toDto(s);
@@ -80,12 +79,14 @@ public class SeriesService {
             series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
         }
 
+        series.setSortOrder(seriesRepo.findMaxSortOrder() + 1);
+
         Series saved = seriesRepo.save(series);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Series saved successfully", "id", saved.getId()));
     }
 
-    public ResponseEntity<Map<String, Object>> updateSeries(Long seriesId, SeriesDto seriesDto) {
+    public ResponseEntity<SeriesDto> updateSeries(Long seriesId, SeriesDto seriesDto) {
         return seriesRepo.findById(seriesId).map(series -> {
             series.setTitle(seriesDto.getTitle());
             series.setStatus(seriesDto.getStatus());
@@ -97,12 +98,32 @@ public class SeriesService {
             }
             Series updated = seriesRepo.save(series);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Series updated successfully");
-            response.put("id", updated.getId());
+            SeriesDto dto = seriesMapper.toDto(updated);
+            dto.setHasEpisode(episodeRepo.existsBySeriesId(updated.getId()));
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(dto);
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Adminda seriallar ro'yxatini qo'lda tartiblash (drag & drop). orderedIds ro'yxatidagi
+     * ketma-ketlik yangi tartibni belgilaydi.
+     */
+    @Transactional
+    public ResponseEntity<?> reorderSeries(List<Long> orderedIds) {
+        List<Series> seriesList = seriesRepo.findAllById(orderedIds);
+        Map<Long, Series> byId = seriesList.stream()
+                .collect(java.util.stream.Collectors.toMap(Series::getId, s -> s));
+
+        for (int i = 0; i < orderedIds.size(); i++) {
+            Series series = byId.get(orderedIds.get(i));
+            if (series != null) {
+                series.setSortOrder(i);
+            }
+        }
+
+        seriesRepo.saveAll(seriesList);
+        return ResponseEntity.ok().build();
     }
 
     @Transactional

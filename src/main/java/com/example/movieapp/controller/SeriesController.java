@@ -130,4 +130,10 @@ public class SeriesController {
         return ResponseEntity.ok(seriesService.getSeriesStatistics());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/reorder")
+    public ResponseEntity<?> reorderSeries(@RequestBody List<Long> orderedIds) {
+        return seriesService.reorderSeries(orderedIds);
+    }
+
 }

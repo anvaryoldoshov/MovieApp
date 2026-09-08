@@ -30,6 +30,8 @@ public class Series {
     private Long monthlyPrice;   // 1 oylik narx (null = tarif yo'q)
     private Long quarterlyPrice; // 3 oylik narx (null = tarif yo'q)
 
+    private Integer sortOrder; // adminda ro'yxatdagi tartibi (kichik = birinchi)
+
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Banner> banners;
