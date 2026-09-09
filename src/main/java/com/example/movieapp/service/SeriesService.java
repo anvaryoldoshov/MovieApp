@@ -24,12 +24,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class SeriesService {
 
-    private static final String REMOVED_STATUS = "REMOVED";
+    // Admin bo'lmagan (mobil) foydalanuvchilarga faqat shu statusdagi seriallar ko'rinadi -
+    // boshqa barcha holatlar (UNLISTED, DRAFT, ARCHIVED, REMOVED) admin tomonidan aniq
+    // "Efirda"ga o'tkazilmaguncha yashirin hisoblanadi. HomeService ham shu ro'yxatdan foydalanadi.
+    public static final Set<String> VISIBLE_STATUSES = Set.of("PUBLISHED", "COMING_SOON");
 
     private final SeriesRepo seriesRepo;
     private final SeriesMapper seriesMapper;
@@ -54,7 +58,7 @@ public class SeriesService {
 
     public ResponseEntity<List<SeriesDto>> findAll(boolean includeHidden) {
         List<SeriesDto> series = seriesRepo.findAllByOrderBySortOrderAscIdAsc().stream()
-                .filter(s -> includeHidden || !REMOVED_STATUS.equals(s.getStatus()))
+                .filter(s -> includeHidden || VISIBLE_STATUSES.contains(s.getStatus()))
                 .map(s -> {
                     SeriesDto dto = seriesMapper.toDto(s);
                     dto.setHasEpisode(episodeRepo.existsBySeriesId(s.getId()));

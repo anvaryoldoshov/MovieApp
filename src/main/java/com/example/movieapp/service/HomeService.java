@@ -42,7 +42,7 @@ public class HomeService {
                 .collect(Collectors.toSet());
 
         List<SeriesDto> seriesList = seriesRepo.findAll().stream()
-                .filter(series -> !"REMOVED".equals(series.getStatus()) || accessIds.contains(series.getId()))
+                .filter(series -> SeriesService.VISIBLE_STATUSES.contains(series.getStatus()) || accessIds.contains(series.getId()))
                 .map(series -> {
                     SeriesDto dto = seriesMapper.toDto(series);
                     dto.setHasAccess(accessIds.contains(series.getId()));
