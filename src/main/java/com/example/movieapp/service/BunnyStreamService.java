@@ -33,13 +33,15 @@ public class BunnyStreamService {
     private static final Pattern UUID_PATTERN =
             Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
-    // Video nomining oxiridagi raqamni ajratib oladi (masalan "ayyubiy32" -> 32).
-    // Nom qismidagi imlo xatolariga (harflarga) e'tibor bermaydi - faqat oxirgi raqam muhim.
-    private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(\\d+)\\s*$");
+    // Video nomida uchraydigan RAQAMLAR ICHIDAN OXIRGISINI ajratib oladi - raqam nomning
+    // boshida ("44ayyubiy" -> 44), o'rtasida yoki oxirida ("ayyubiy45" -> 45) bo'lishidan
+    // qat'i nazar ishlaydi, chunki adminlar bir xil kolleksiya ichida turlicha nomlashi mumkin.
+    // "(?!.*\\d)" - o'zidan keyin boshqa raqam kelmasligini talab qiladi, ya'ni oxirgi raqam guruhi tanlanadi.
+    private static final Pattern LAST_NUMBER_PATTERN = Pattern.compile("(\\d+)(?!.*\\d)");
 
     // Bunny'ga yuklashda video nomi ko'pincha original fayl nomi (kengaytmasi bilan) bo'lib
     // qoladi (masalan "Ayyubiy 32.mp4") - raqamni izlashdan oldin shu kengaytmani olib tashlaymiz,
-    // aks holda "32.mp4" oxirida raqam emas, nuqta+harflar turgani uchun mos kelmay qoladi.
+    // aks holda kengaytmadagi raqamlar (masalan "mp4" dagi "4") chalkashtirib yuborishi mumkin.
     private static final Pattern TRAILING_FILE_EXTENSION_PATTERN =
             Pattern.compile("(?i)\\.(mp4|mkv|mov|avi|wmv|flv|webm|m4v|ts|m3u8|mpg|mpeg)$");
 
@@ -126,16 +128,17 @@ public class BunnyStreamService {
     }
 
     /**
-     * Video nomining oxiridagi raqamni epizod raqami sifatida ajratib oladi
-     * (masalan "Ayyubiy 32" yoki "ayubiy32" -> 32). Nomning matn qismida imlo xatosi
-     * bo'lishi mumkinligi uchun faqat raqamga tayaniladi.
+     * Video nomidagi raqamni epizod raqami sifatida ajratib oladi (masalan "Ayyubiy 32",
+     * "ayubiy32" yoki "44ayyubiy" -> mos ravishda 32, 32, 44). Raqam nomning istalgan
+     * joyida bo'lishi mumkin - nomning matn qismidagi imlo xatolariga e'tibor berilmaydi,
+     * faqat oxirgi raqamlar guruhiga tayaniladi.
      */
     public Integer extractEpisodeNumberFromTitle(String title) {
         if (title == null) {
             return null;
         }
         String cleaned = TRAILING_FILE_EXTENSION_PATTERN.matcher(title.trim()).replaceFirst("");
-        Matcher matcher = TRAILING_NUMBER_PATTERN.matcher(cleaned.trim());
+        Matcher matcher = LAST_NUMBER_PATTERN.matcher(cleaned.trim());
         if (!matcher.find()) {
             return null;
         }

@@ -262,10 +262,10 @@ public class EpisodeService {
 
     /**
      * Admin videolarni oldindan Bunny'ga yuklab qo'yganda, hali hech qanday epizodga
-     * biriktirilmagan videoni topib, uning playback URL'ini taklif qiladi. Agar serialga
-     * Bunny Collection ID biriktirilgan bo'lsa, faqat shu Collection ichidan qidiradi va
-     * videoning nomidagi raqamdan epizod raqamini ham ajratib beradi; aks holda butun
-     * kutubxona bo'yicha (eskisi birinchi) qidiradi va raqamni bo'sh qoldiradi.
+     * biriktirilmagan videoni topib, uning playback URL'ini va nomidagi raqamdan epizod
+     * raqamini taklif qiladi. Faqat serialga Bunny Collection ID biriktirilgan bo'lsa
+     * ishlaydi - aks holda hech narsa taklif qilinmaydi, chunki collection'siz qaysi video
+     * qaysi serialga tegishli ekanini ishonchli aniqlab bo'lmaydi.
      */
     public Optional<VideoSuggestion> suggestNextVideo(Long seriesId) {
         Series series = seriesRepo.findById(seriesId)
@@ -295,23 +295,24 @@ public class EpisodeService {
         }
 
         String collectionId = series.getBunnyCollectionId();
-        List<BunnyStreamService.BunnyLibraryVideo> videos = bunnyStreamService.listLibraryVideos(collectionId);
-
-        if (collectionId != null && !collectionId.isBlank()) {
-            return videos.stream()
-                    .filter(v -> !usedGuids.contains(v.guid()))
-                    .map(v -> new VideoSuggestion(
-                            bunnyStreamService.buildPlaybackUrl(baseUrl.get(), v.guid()),
-                            bunnyStreamService.extractEpisodeNumberFromTitle(v.title())
-                    ))
-                    .sorted(Comparator.comparing(VideoSuggestion::episodeNumber, Comparator.nullsLast(Comparator.naturalOrder())))
-                    .findFirst();
+        if (collectionId == null || collectionId.isBlank()) {
+            // Collection ID bo'lmasa, butun kutubxonadagi "eng eski ishlatilmagan" videoni
+            // taklif qilib bo'lmaydi - u boshqa serialga tegishli bo'lishi mumkin va har doim
+            // bir xil (noto'g'ri) videoni qaytarib, adminni chalg'itadi. Shuning uchun bunday
+            // holda hech narsa taklif qilinmaydi - admin videoni qo'lda kiritadi.
+            return Optional.empty();
         }
+
+        List<BunnyStreamService.BunnyLibraryVideo> videos = bunnyStreamService.listLibraryVideos(collectionId);
 
         return videos.stream()
                 .filter(v -> !usedGuids.contains(v.guid()))
-                .findFirst()
-                .map(v -> new VideoSuggestion(bunnyStreamService.buildPlaybackUrl(baseUrl.get(), v.guid()), null));
+                .map(v -> new VideoSuggestion(
+                        bunnyStreamService.buildPlaybackUrl(baseUrl.get(), v.guid()),
+                        bunnyStreamService.extractEpisodeNumberFromTitle(v.title())
+                ))
+                .sorted(Comparator.comparing(VideoSuggestion::episodeNumber, Comparator.nullsLast(Comparator.naturalOrder())))
+                .findFirst();
     }
 
     /**
