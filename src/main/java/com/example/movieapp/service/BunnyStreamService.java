@@ -62,6 +62,11 @@ public class BunnyStreamService {
     @Value("${bunny.stream.token-auth-key:}")
     private String tokenAuthKey;
 
+    // Tizimda hali birorta ham epizod bo'lmaganda (mavjud videodan CDN manzilini o'qib
+    // bo'lmaydi) ishlatiladigan zaxira CDN bazaviy manzili.
+    @Value("${bunny.stream.cdn-base-url:}")
+    private String configuredCdnBaseUrl;
+
     public record BunnyVideoInfo(int durationSeconds, long sizeBytes, String thumbnailUrl) {
     }
 
@@ -151,6 +156,18 @@ public class BunnyStreamService {
         }
         Matcher matcher = VIDEO_URL_PATTERN.matcher(videoUrl);
         return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
+    }
+
+    /**
+     * Mavjud epizodlardan CDN manzilini aniqlab bo'lmasa (masalan hali birorta ham
+     * epizod yo'q bo'lsa) ishlatiladigan, qo'lda sozlangan zaxira CDN manzili.
+     */
+    public Optional<String> getConfiguredCdnBaseUrl() {
+        if (configuredCdnBaseUrl == null || configuredCdnBaseUrl.isBlank()) {
+            return Optional.empty();
+        }
+        String trimmed = configuredCdnBaseUrl.trim();
+        return Optional.of(trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed);
     }
 
     public String buildPlaybackUrl(String baseUrl, String videoGuid) {

@@ -286,10 +286,11 @@ public class EpisodeService {
                 .map(bunnyStreamService::extractBaseUrl)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .findFirst();
+                .findFirst()
+                .or(bunnyStreamService::getConfiguredCdnBaseUrl);
 
         if (baseUrl.isEmpty()) {
-            log.warn("Bunny CDN bazaviy manzilini aniqlash uchun mavjud epizod topilmadi");
+            log.warn("Bunny CDN bazaviy manzilini aniqlash uchun mavjud epizod topilmadi va bunny.stream.cdn-base-url sozlanmagan");
             return Optional.empty();
         }
 
@@ -343,12 +344,13 @@ public class EpisodeService {
                 .map(bunnyStreamService::extractBaseUrl)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .findFirst();
+                .findFirst()
+                .or(bunnyStreamService::getConfiguredCdnBaseUrl);
 
         Map<String, Object> result = new HashMap<>();
         if (baseUrlOpt.isEmpty()) {
             result.put("imported", 0);
-            result.put("error", "Bunny CDN manzilini aniqlash uchun kamida bitta mavjud epizod kerak");
+            result.put("error", "Bunny CDN manzilini aniqlash uchun kamida bitta mavjud epizod yoki bunny.stream.cdn-base-url sozlamasi kerak");
             return result;
         }
         String baseUrl = baseUrlOpt.get();
