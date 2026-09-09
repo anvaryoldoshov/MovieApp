@@ -33,11 +33,12 @@ public class BunnyStreamService {
     private static final Pattern UUID_PATTERN =
             Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
-    // Video nomida uchraydigan RAQAMLAR ICHIDAN OXIRGISINI ajratib oladi - raqam nomning
-    // boshida ("44ayyubiy" -> 44), o'rtasida yoki oxirida ("ayyubiy45" -> 45) bo'lishidan
-    // qat'i nazar ishlaydi, chunki adminlar bir xil kolleksiya ichida turlicha nomlashi mumkin.
-    // "(?!.*\\d)" - o'zidan keyin boshqa raqam kelmasligini talab qiladi, ya'ni oxirgi raqam guruhi tanlanadi.
-    private static final Pattern LAST_NUMBER_PATTERN = Pattern.compile("(\\d+)(?!.*\\d)");
+    // Video nomida uchraydigan RAQAMLAR ICHIDAN BIRINCHISINI epizod raqami sifatida oladi -
+    // raqam nomning boshida ("44ayyubiy" -> 44) yoki oxirida ("ayyubiy45" -> 45) bo'lishidan
+    // qat'i nazar ishlaydi. Birinchisi tanlanadi, chunki fayl nomiga keyinchalik qo'shilgan
+    // versiya/nusxa belgilari (masalan "83Mehmed_2.mp4" dagi "_2") oxirida bo'lib, ular bilan
+    // adashtirmaslik kerak - asosiy epizod raqami deyarli har doim nomning boshida keladi.
+    private static final Pattern FIRST_NUMBER_PATTERN = Pattern.compile("(\\d+)");
 
     // Bunny'ga yuklashda video nomi ko'pincha original fayl nomi (kengaytmasi bilan) bo'lib
     // qoladi (masalan "Ayyubiy 32.mp4") - raqamni izlashdan oldin shu kengaytmani olib tashlaymiz,
@@ -129,16 +130,17 @@ public class BunnyStreamService {
 
     /**
      * Video nomidagi raqamni epizod raqami sifatida ajratib oladi (masalan "Ayyubiy 32",
-     * "ayubiy32" yoki "44ayyubiy" -> mos ravishda 32, 32, 44). Raqam nomning istalgan
-     * joyida bo'lishi mumkin - nomning matn qismidagi imlo xatolariga e'tibor berilmaydi,
-     * faqat oxirgi raqamlar guruhiga tayaniladi.
+     * "ayubiy32", "44ayyubiy" yoki "83Mehmed_2" -> mos ravishda 32, 32, 44, 83). Raqam
+     * nomning boshida yoki oxirida bo'lishi mumkin - nomning matn qismidagi imlo xatolariga
+     * e'tibor berilmaydi, birinchi uchragan raqamlar guruhiga tayaniladi (fayl nomiga
+     * keyinchalik qo'shilgan "_2" kabi versiya belgilari bilan adashtirmaslik uchun).
      */
     public Integer extractEpisodeNumberFromTitle(String title) {
         if (title == null) {
             return null;
         }
         String cleaned = TRAILING_FILE_EXTENSION_PATTERN.matcher(title.trim()).replaceFirst("");
-        Matcher matcher = LAST_NUMBER_PATTERN.matcher(cleaned.trim());
+        Matcher matcher = FIRST_NUMBER_PATTERN.matcher(cleaned.trim());
         if (!matcher.find()) {
             return null;
         }
