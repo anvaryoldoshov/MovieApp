@@ -37,6 +37,12 @@ public class BunnyStreamService {
     // Nom qismidagi imlo xatolariga (harflarga) e'tibor bermaydi - faqat oxirgi raqam muhim.
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(\\d+)\\s*$");
 
+    // Bunny'ga yuklashda video nomi ko'pincha original fayl nomi (kengaytmasi bilan) bo'lib
+    // qoladi (masalan "Ayyubiy 32.mp4") - raqamni izlashdan oldin shu kengaytmani olib tashlaymiz,
+    // aks holda "32.mp4" oxirida raqam emas, nuqta+harflar turgani uchun mos kelmay qoladi.
+    private static final Pattern TRAILING_FILE_EXTENSION_PATTERN =
+            Pattern.compile("(?i)\\.(mp4|mkv|mov|avi|wmv|flv|webm|m4v|ts|m3u8|mpg|mpeg)$");
+
     // Havola bir necha soatlik pleer sessiyasi davomida ishlashi uchun yetarli, lekin
     // taqsimlab yuborilgan holda uzoq muddat ishlamasligi uchun qisqa muddatga cheklangan.
     private static final long TOKEN_TTL_SECONDS = 4 * 60 * 60;
@@ -123,7 +129,8 @@ public class BunnyStreamService {
         if (title == null) {
             return null;
         }
-        Matcher matcher = TRAILING_NUMBER_PATTERN.matcher(title.trim());
+        String cleaned = TRAILING_FILE_EXTENSION_PATTERN.matcher(title.trim()).replaceFirst("");
+        Matcher matcher = TRAILING_NUMBER_PATTERN.matcher(cleaned.trim());
         if (!matcher.find()) {
             return null;
         }
