@@ -36,6 +36,8 @@ public class Series {
 
     private String bunnyCollectionId; // Bunny Stream'dagi shu serialga tegishli Collection GUID'i (ixtiyoriy)
 
+    private long viewCount; // serial detali necha marta ochilgani
+
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Banner> banners;

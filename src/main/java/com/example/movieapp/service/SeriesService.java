@@ -2,10 +2,15 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.GetDetailsResponse;
 import com.example.movieapp.dto.SeriesDto;
+import com.example.movieapp.dto.SeriesLikeResponse;
 import com.example.movieapp.dto.SeriesStatDto;
 import com.example.movieapp.entities.Episode;
 import com.example.movieapp.entities.Series;
+import com.example.movieapp.entities.SeriesLike;
+import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.SeriesHasActiveSubscribersException;
+import com.example.movieapp.exception.SeriesNotFoundException;
+import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.mapper.SeriesMapper;
 import com.example.movieapp.dto.EpisodePartDto;
@@ -15,15 +20,19 @@ import com.example.movieapp.repository.GenreRepo;
 import com.example.movieapp.repository.MovieAccessRepository;
 import com.example.movieapp.repository.PaymentRepository;
 import com.example.movieapp.repository.SeasonRepo;
+import com.example.movieapp.repository.SeriesLikeRepo;
 import com.example.movieapp.repository.SeriesRepo;
+import com.example.movieapp.repository.UserRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -45,6 +54,8 @@ public class SeriesService {
     private final GenreRepo genreRepo;
     private final SeasonRepo seasonRepo;
     private final BunnyStreamService bunnyStreamService;
+    private final SeriesLikeRepo seriesLikeRepo;
+    private final UserRepo userRepo;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -68,8 +79,12 @@ public class SeriesService {
         return ResponseEntity.ok(series);
     }
 
-    public GetDetailsResponse getDetails(Long seriesId, boolean hasAccess) {
-        Series series = seriesRepo.findById(seriesId).orElseThrow(() -> new RuntimeException("Series not found"));
+    @Transactional
+    public GetDetailsResponse getDetails(Long seriesId, boolean hasAccess, Long userId) {
+        Series series = seriesRepo.findById(seriesId).orElseThrow(SeriesNotFoundException::new);
+
+        series.setViewCount(series.getViewCount() + 1);
+        seriesRepo.save(series);
 
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
         List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
@@ -83,7 +98,45 @@ public class SeriesService {
             part.setHasAccess(hasAccess || isFree);
         }
 
-        return GetDetailsResponse.builder().id(series.getId()).title(series.getTitle()).parts(parts).hasAccess(hasAccess).build();
+        long likeCount = seriesLikeRepo.countBySeries_Id(seriesId);
+        boolean liked = userId != null && seriesLikeRepo.existsBySeries_IdAndUser_Id(seriesId, userId);
+
+        return GetDetailsResponse.builder()
+                .id(series.getId())
+                .title(series.getTitle())
+                .parts(parts)
+                .hasAccess(hasAccess)
+                .likeCount(likeCount)
+                .liked(liked)
+                .viewCount(series.getViewCount())
+                .build();
+    }
+
+    /**
+     * Foydalanuvchi serialga like bosadi/olib tashlaydi (toggle).
+     */
+    @Transactional
+    public SeriesLikeResponse toggleLike(Long seriesId, Long userId) {
+        Series series = seriesRepo.findById(seriesId).orElseThrow(SeriesNotFoundException::new);
+        User user = userRepo.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        boolean liked;
+        Optional<SeriesLike> existing = seriesLikeRepo.findBySeries_IdAndUser_Id(seriesId, userId);
+        if (existing.isPresent()) {
+            seriesLikeRepo.delete(existing.get());
+            liked = false;
+        } else {
+            SeriesLike like = SeriesLike.builder()
+                    .series(series)
+                    .user(user)
+                    .createdAt(Instant.now())
+                    .build();
+            seriesLikeRepo.save(like);
+            liked = true;
+        }
+
+        long likeCount = seriesLikeRepo.countBySeries_Id(seriesId);
+        return new SeriesLikeResponse(liked, likeCount);
     }
 
     public ResponseEntity<Map<String, Object>> saveSeries(SeriesDto seriesDto) {

@@ -63,7 +63,16 @@ public class SeriesController {
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        return ResponseEntity.ok(seriesService.getDetails(serialId, canWatch));
+        return ResponseEntity.ok(seriesService.getDetails(serialId, canWatch, user.getId()));
+    }
+
+    @PostMapping("/{serialId}/like")
+    public ResponseEntity<?> toggleLike(@PathVariable Long serialId, Authentication authentication) {
+        String email = authentication.getName();
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+
+        return ResponseEntity.ok(seriesService.toggleLike(serialId, user.getId()));
     }
 
 

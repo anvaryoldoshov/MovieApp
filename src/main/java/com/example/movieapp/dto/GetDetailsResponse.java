@@ -16,4 +16,7 @@ public class GetDetailsResponse {
     private String title;
     private List<EpisodePartDto> parts;
     private boolean hasAccess;
+    private long likeCount;
+    private boolean liked;
+    private long viewCount;
 }
