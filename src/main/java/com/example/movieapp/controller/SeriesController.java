@@ -12,6 +12,7 @@ import com.example.movieapp.service.EpisodeService;
 import com.example.movieapp.service.FileStorageService;
 import com.example.movieapp.service.MovieAccessService;
 import com.example.movieapp.service.SeriesService;
+import com.example.movieapp.service.WatchProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,7 @@ public class SeriesController {
     private final UserRepo userRepo;
     private final MovieAccessService movieAccessService;
     private final EpisodeService episodeService;
+    private final WatchProgressService watchProgressService;
 
     @GetMapping("/all")
     public ResponseEntity<List<SeriesDto>> series(Authentication authentication) {
@@ -52,6 +54,8 @@ public class SeriesController {
 
         EpisodeDto episode = episodeService.getEpisodeById(serialId, episodeId);
         episodeService.finalizeVideoUrlForAccess(episode, canWatch || episode.isFree());
+        episode.setWatchedSeconds(watchProgressService.getProgressMap(user.getId(), List.of(episodeId))
+                .getOrDefault(episodeId, 0));
         return ResponseEntity.ok(episode);
     }
 

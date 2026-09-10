@@ -13,4 +13,6 @@ public class EpisodePartDto {
     private Long seasonId;
     private Integer seasonNumber;
     private String seasonTitle;
+    private int watchedSeconds; // foydalanuvchi shu epizodni necha soniyagacha ko'rgani
+    private int durationSeconds;
 }

@@ -56,6 +56,7 @@ public class SeriesService {
     private final BunnyStreamService bunnyStreamService;
     private final SeriesLikeRepo seriesLikeRepo;
     private final UserRepo userRepo;
+    private final WatchProgressService watchProgressService;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -91,11 +92,15 @@ public class SeriesService {
 
         // Bonus/bepul epizodlar (serialda "birinchi N ta epizod bepul" siyosati bo'yicha) obunasiz ham ochiq
         Integer freeCount = series.getFreeEpisodesCount();
+        Map<Long, Integer> progressMap = userId != null
+                ? watchProgressService.getProgressMap(userId, parts.stream().map(EpisodePartDto::getEpisodeId).toList())
+                : Map.of();
         for (int i = 0; i < parts.size(); i++) {
             EpisodePartDto part = parts.get(i);
             boolean isFree = freeCount != null && part.getEpisodeNumber() <= freeCount;
             part.setFree(isFree);
             part.setHasAccess(hasAccess || isFree);
+            part.setWatchedSeconds(progressMap.getOrDefault(part.getEpisodeId(), 0));
         }
 
         long likeCount = seriesLikeRepo.countBySeries_Id(seriesId);

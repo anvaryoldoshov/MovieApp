@@ -34,4 +34,6 @@ public class EpisodeDto {
 
     private Integer seasonNumber;
 
+    private int watchedSeconds; // foydalanuvchi shu epizodni necha soniyagacha ko'rgani
+
 }
