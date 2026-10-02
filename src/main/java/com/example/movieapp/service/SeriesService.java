@@ -158,7 +158,7 @@ public class SeriesService {
         series.setSortOrder(seriesRepo.findMaxSortOrder() + 1);
         series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
         series.setBunnyCollectionId(bunnyStreamService.extractCollectionId(seriesDto.getBunnyCollectionId()));
-        series.setSubscriptionBased(seriesDto.isSubscriptionBased());
+        series.setSubscriptionBased(seriesDto.getSubscriptionBased());
 
         Series saved = seriesRepo.save(series);
 
@@ -174,7 +174,7 @@ public class SeriesService {
             series.setQuarterlyPrice(seriesDto.getQuarterlyPrice());
             series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
             series.setBunnyCollectionId(bunnyStreamService.extractCollectionId(seriesDto.getBunnyCollectionId()));
-            series.setSubscriptionBased(seriesDto.isSubscriptionBased());
+            series.setSubscriptionBased(seriesDto.getSubscriptionBased());
             if (seriesDto.getGenreIds() != null) {
                 series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
             }
@@ -244,3 +244,4 @@ public class SeriesService {
                 .toList();
     }
 }
+

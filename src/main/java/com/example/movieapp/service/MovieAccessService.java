@@ -246,7 +246,7 @@ public class MovieAccessService {
 
         // 2. Serial obuna orqali ko'rish mumkinmi? (subscriptionBased = true + user faol obunaga ega)
         Series series = seriesRepo.findById(serialId).orElse(null);
-        if (series != null && series.isSubscriptionBased()) {
+        if (series != null && series.getSubscriptionBased()) {
             User user = userRepo.findById(userId).orElse(null);
             if (user != null && Boolean.TRUE.equals(user.getSubscription())) {
                 LocalDate subEnd = user.getSubscriptionEndDate();
