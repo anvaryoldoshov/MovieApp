@@ -18,5 +18,6 @@ public class GetDetailsResponse {
     private boolean hasAccess;
     private long likeCount;
     private boolean liked;
-    private long viewCount;
+    private Long viewCount;
 }
+

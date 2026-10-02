@@ -84,7 +84,7 @@ public class SeriesService {
     public GetDetailsResponse getDetails(Long seriesId, boolean hasAccess, Long userId) {
         Series series = seriesRepo.findById(seriesId).orElseThrow(SeriesNotFoundException::new);
 
-        series.setViewCount(series.getViewCount() + 1);
+        series.setViewCount((series.getViewCount() == null ? 0L : series.getViewCount()) + 1L);
         seriesRepo.save(series);
 
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
@@ -244,4 +244,5 @@ public class SeriesService {
                 .toList();
     }
 }
+
 

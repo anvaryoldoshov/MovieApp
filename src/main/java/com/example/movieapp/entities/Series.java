@@ -36,12 +36,12 @@ public class Series {
 
     private String bunnyCollectionId; // Bunny Stream'dagi shu serialga tegishli Collection GUID'i (ixtiyoriy)
 
-    private long viewCount; // serial detali necha marta ochilgani
+    private Long viewCount; // serial detali necha marta ochilgani
 
     /**
-     * true  â†’ bu serial faqat obuna (SubscriptionPlan) orqali ko'riladi;
+     * true  Ã¢â€ â€™ bu serial faqat obuna (SubscriptionPlan) orqali ko'riladi;
      *          monthlyPrice/quarterlyPrice ishlatilmaydi.
-     * false â†’ bu serial alohida sotib olinadi (monthlyPrice/quarterlyPrice kerak).
+     * false Ã¢â€ â€™ bu serial alohida sotib olinadi (monthlyPrice/quarterlyPrice kerak).
      */
     private Boolean subscriptionBased;
 
@@ -62,4 +62,5 @@ public class Series {
     private List<Genre> genres;
 
 }
+
 
