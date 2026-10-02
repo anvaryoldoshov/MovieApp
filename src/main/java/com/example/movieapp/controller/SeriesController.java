@@ -1,4 +1,4 @@
-package com.example.movieapp.controller;
+﻿package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;
@@ -89,7 +89,7 @@ public class SeriesController {
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
                                           @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
                                           @RequestParam(value = "bunnyCollectionId", required = false) String bunnyCollectionId,
-                                          @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") boolean subscriptionBased,
+                                          @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") Boolean subscriptionBased,
                                           @RequestParam("image") MultipartFile image) {
         String imagePath = fileStorageService.saveImage("series", image);
 
@@ -117,7 +117,7 @@ public class SeriesController {
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
                                           @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
                                           @RequestParam(value = "bunnyCollectionId", required = false) String bunnyCollectionId,
-                                          @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") boolean subscriptionBased,
+                                          @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") Boolean subscriptionBased,
                                           @RequestParam(value = "image", required = false) MultipartFile image) {
 
         Optional<Series> existing = seriesRepo.findById(id);
@@ -162,3 +162,4 @@ public class SeriesController {
     }
 
 }
+

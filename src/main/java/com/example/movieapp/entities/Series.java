@@ -1,4 +1,4 @@
-package com.example.movieapp.entities;
+﻿package com.example.movieapp.entities;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -39,11 +39,11 @@ public class Series {
     private long viewCount; // serial detali necha marta ochilgani
 
     /**
-     * true  → bu serial faqat obuna (SubscriptionPlan) orqali ko'riladi;
+     * true  â†’ bu serial faqat obuna (SubscriptionPlan) orqali ko'riladi;
      *          monthlyPrice/quarterlyPrice ishlatilmaydi.
-     * false → bu serial alohida sotib olinadi (monthlyPrice/quarterlyPrice kerak).
+     * false â†’ bu serial alohida sotib olinadi (monthlyPrice/quarterlyPrice kerak).
      */
-    private boolean subscriptionBased;
+    private Boolean subscriptionBased;
 
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
@@ -62,3 +62,4 @@ public class Series {
     private List<Genre> genres;
 
 }
+
