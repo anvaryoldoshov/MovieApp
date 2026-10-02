@@ -1,4 +1,4 @@
-﻿package com.example.movieapp.controller;
+package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;

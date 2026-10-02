@@ -1,4 +1,4 @@
-﻿package com.example.movieapp.entities;
+package com.example.movieapp.entities;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;

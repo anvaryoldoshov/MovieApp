@@ -1,4 +1,4 @@
-﻿package com.example.movieapp.dto;
+package com.example.movieapp.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
