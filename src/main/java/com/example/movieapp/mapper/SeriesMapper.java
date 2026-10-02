@@ -20,6 +20,7 @@ public interface SeriesMapper {
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "episodes", ignore = true)
     @Mapping(target = "genres", ignore = true)
+    @Mapping(target = "viewCount", ignore = true)
     Series toEntity(SeriesDto dto);
 
     @Named("seriesDtoToEntityById")

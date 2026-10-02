@@ -35,11 +35,24 @@ public class HomeService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         LocalDate today = LocalDate.now();
+
+        // Foydalanuvchining faol obunasini tekshirish
+        boolean hasActiveSubscription = Boolean.TRUE.equals(user.getSubscription())
+                && (user.getSubscriptionEndDate() == null || !today.isAfter(user.getSubscriptionEndDate()));
+
+        // Individual sotib olingan yoki bepul kirish huquqlari
         Set<Long> accessIds = movieAccessRepository.findByUserId(userId).stream()
                 .filter(ma -> !ma.isPaid() ||
                         (ma.getAccessEndDate() == null || !today.isAfter(ma.getAccessEndDate())))
                 .map(ma -> ma.getMovie().getId())
                 .collect(Collectors.toSet());
+
+        // Agar faol obuna bo'lsa — subscriptionBased seriallar ham ochiq
+        if (hasActiveSubscription) {
+            seriesRepo.findAllBySubscriptionBasedTrue().stream()
+                    .map(s -> s.getId())
+                    .forEach(accessIds::add);
+        }
 
         List<SeriesDto> seriesList = seriesRepo.findAll().stream()
                 .filter(series -> SeriesService.VISIBLE_STATUSES.contains(series.getStatus()) || accessIds.contains(series.getId()))

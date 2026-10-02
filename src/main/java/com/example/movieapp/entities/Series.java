@@ -38,6 +38,13 @@ public class Series {
 
     private long viewCount; // serial detali necha marta ochilgani
 
+    /**
+     * true  → bu serial faqat obuna (SubscriptionPlan) orqali ko'riladi;
+     *          monthlyPrice/quarterlyPrice ishlatilmaydi.
+     * false → bu serial alohida sotib olinadi (monthlyPrice/quarterlyPrice kerak).
+     */
+    private boolean subscriptionBased;
+
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Banner> banners;

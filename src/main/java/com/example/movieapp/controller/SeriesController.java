@@ -89,6 +89,7 @@ public class SeriesController {
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
                                           @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
                                           @RequestParam(value = "bunnyCollectionId", required = false) String bunnyCollectionId,
+                                          @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") boolean subscriptionBased,
                                           @RequestParam("image") MultipartFile image) {
         String imagePath = fileStorageService.saveImage("series", image);
 
@@ -100,6 +101,7 @@ public class SeriesController {
         dto.setGenreIds(genreIds);
         dto.setFreeEpisodesCount(freeEpisodesCount);
         dto.setBunnyCollectionId(bunnyCollectionId);
+        dto.setSubscriptionBased(subscriptionBased);
         dto.setImagePath(imagePath);
 
         return seriesService.saveSeries(dto);
@@ -115,6 +117,7 @@ public class SeriesController {
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
                                           @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
                                           @RequestParam(value = "bunnyCollectionId", required = false) String bunnyCollectionId,
+                                          @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") boolean subscriptionBased,
                                           @RequestParam(value = "image", required = false) MultipartFile image) {
 
         Optional<Series> existing = seriesRepo.findById(id);
@@ -128,6 +131,7 @@ public class SeriesController {
         dto.setGenreIds(genreIds);
         dto.setFreeEpisodesCount(freeEpisodesCount);
         dto.setBunnyCollectionId(bunnyCollectionId);
+        dto.setSubscriptionBased(subscriptionBased);
 
         if (image != null && !image.isEmpty()) {
             String imagePath = fileStorageService.saveImage("series", image);

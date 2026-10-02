@@ -234,6 +234,7 @@ public class MovieAccessService {
     }
 
     public boolean canUserWatchMovie(Long userId, Long serialId) {
+        // 1. Individual pullik kirish mavjudmi?
         Optional<MovieAccess> paidAccess = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsTrue(userId, serialId);
         if (paidAccess.isPresent()) {
             LocalDate endDate = paidAccess.get().getAccessEndDate();
@@ -243,6 +244,20 @@ public class MovieAccessService {
             }
         }
 
+        // 2. Serial obuna orqali ko'rish mumkinmi? (subscriptionBased = true + user faol obunaga ega)
+        Series series = seriesRepo.findById(serialId).orElse(null);
+        if (series != null && series.isSubscriptionBased()) {
+            User user = userRepo.findById(userId).orElse(null);
+            if (user != null && Boolean.TRUE.equals(user.getSubscription())) {
+                LocalDate subEnd = user.getSubscriptionEndDate();
+                if (subEnd == null || !LocalDate.now().isAfter(subEnd)) {
+                    log.debug("Access granted for user {} via active subscription to serial {}.", userId, serialId);
+                    return true;
+                }
+            }
+        }
+
+        // 3. Bepul (paid=false) kirish mavjudmi?
         Optional<MovieAccess> freeAccess = movieAccessRepository.findByUser_IdAndMovie_IdAndPaidIsFalse(userId, serialId);
         if (freeAccess.isPresent()) {
             log.debug("Access granted for user {} via free access to serial {}.", userId, serialId);
@@ -252,4 +267,4 @@ public class MovieAccessService {
         log.debug("Access denied for user {} to serial {}.", userId, serialId);
         return false;
     }
-}
+}

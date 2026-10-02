@@ -45,6 +45,9 @@ public enum ErrorCode {
     SEASON_HAS_EPISODES(11002, "Bu faslda epizodlar mavjud, avval ularni o'chiring yoki boshqa faslga ko'chiring"),
     SEASON_ALREADY_EXISTS(11003, "Bu raqamli fasl allaqachon mavjud"),
 
+    // Subscription (12000-12099)
+    SUBSCRIPTION_PLAN_NOT_FOUND(12001, "Obuna tarifi topilmadi"),
+
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
 

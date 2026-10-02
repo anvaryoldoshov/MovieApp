@@ -32,4 +32,12 @@ public class SeriesDto {
 
     private String bunnyCollectionId; // Bunny Stream Collection ID yoki URL (server tomonda tozalanadi)
 
+    /**
+     * true  → obuna seriali (SubscriptionPlan orqali ko'riladi, alohida narxi yo'q)
+     * false → alohida sotib olinadigan serial (monthlyPrice/quarterlyPrice kerak)
+     */
+    private boolean subscriptionBased;
+
+    private long viewCount; // serial detali necha marta ochilgani (faqat o'qish)
+
 }

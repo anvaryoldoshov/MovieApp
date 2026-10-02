@@ -30,6 +30,11 @@ public class Payment {
     @JoinColumn(name = "series_id")
     private Series series;
 
+    // Obuna to'lovlari uchun: qaysi tarif sotib olinganligini saqlaydi (individual serial uchun null)
+    @ManyToOne
+    @JoinColumn(name = "subscription_plan_id")
+    private SubscriptionPlan subscriptionPlan;
+
     @Column(nullable = false)
     private Long amount; // tiyin (1 so'm = 100 tiyin)
 

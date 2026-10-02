@@ -15,4 +15,6 @@ public interface SeriesRepo extends JpaRepository<Series, Long> {
     @Query("SELECT COALESCE(MAX(s.sortOrder), -1) FROM Series s")
     int findMaxSortOrder();
 
+    List<Series> findAllBySubscriptionBasedTrue();
+
 }
