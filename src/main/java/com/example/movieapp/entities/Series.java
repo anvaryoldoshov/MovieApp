@@ -36,7 +36,10 @@ public class Series {
 
     private String bunnyCollectionId; // Bunny Stream'dagi shu serialga tegishli Collection GUID'i (ixtiyoriy)
 
-    private Long viewCount; // serial detali necha marta ochilgani
+    // Serial detali necha marta ochilgani. Bazada ustun NOT NULL, shuning uchun yangi
+    // serial 0 bilan saqlanishi shart (aks holda "null value in column view_count" xatosi).
+    @Column(nullable = false)
+    private Long viewCount = 0L;
 
     /**
      * true  Ã¢â€ â€™ bu serial faqat obuna (SubscriptionPlan) orqali ko'riladi;

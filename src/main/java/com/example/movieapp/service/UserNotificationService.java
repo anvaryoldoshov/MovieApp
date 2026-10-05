@@ -8,9 +8,11 @@ import com.example.movieapp.exception.UserNotificationNotFoundException;
 import com.example.movieapp.mapper.UserNotificationMapper;
 import com.example.movieapp.repository.UserDeviceRepository;
 import com.example.movieapp.repository.UserNotificationRepository;
+import com.example.movieapp.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +28,7 @@ public class UserNotificationService {
     private final UserDeviceRepository userDeviceRepository;
     private final NotificationService notificationService;
     private final UserNotificationMapper userNotificationMapper;
+    private final UserRepo userRepo;
 
     /**
      * Notifikatsiyani bazaga (inbox uchun) yozadi va foydalanuvchining qurilmasiga push yuboradi.
@@ -51,6 +54,28 @@ public class UserNotificationService {
         } catch (Exception e) {
             log.error("Foydalanuvchi {} ga push yuborishda xatolik: {}", user.getId(), e.getMessage());
         }
+    }
+
+    /**
+     * Admin barcha foydalanuvchilarga yuborgan push'ni har birining inbox'iga yozadi
+     * (push'ning o'zi NotificationService.sendCustomNotification orqali alohida yuboriladi).
+     * Shunda foydalanuvchi bildirishnomani o'chirib yuborsa ham, ilova ichida ko'ra oladi.
+     */
+    @Transactional
+    public int saveBroadcastToInbox(String type, String title, String body, String imageUrl) {
+        String safeBody = body != null && body.length() > 1000 ? body.substring(0, 1000) : body;
+        List<UserNotification> rows = userRepo.findAllIds().stream()
+                .map(id -> UserNotification.builder()
+                        .user(userRepo.getReferenceById(id))
+                        .type(type)
+                        .title(title)
+                        .body(safeBody)
+                        .imageUrl(imageUrl)
+                        .read(false)
+                        .build())
+                .toList();
+        userNotificationRepository.saveAll(rows);
+        return rows.size();
     }
 
     public List<UserNotificationDto> getRecent(Long userId, int days) {

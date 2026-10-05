@@ -2,9 +2,11 @@ package com.example.movieapp.controller;
 
 import com.example.movieapp.service.FileStorageService;
 import com.example.movieapp.service.NotificationService;
+import com.example.movieapp.service.UserNotificationService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/admin/notifications")
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class AdminNotificationController {
     private static final float NOTIFICATION_IMAGE_QUALITY = 0.8f;
 
     private final NotificationService notificationService;
+    private final UserNotificationService userNotificationService;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
 
@@ -60,12 +64,22 @@ public class AdminNotificationController {
             imageUrl = baseUrl + imagePath;
         }
 
+        // Ilova ichidagi bildirishnomalar ro'yxatiga (inbox) ham yozamiz — aks holda foydalanuvchi
+        // push'ni o'chirib yuborsa, uni qayta topa olmaydi. Xato bo'lsa ham push yuborilaveradi.
+        int savedToInbox = 0;
+        try {
+            savedToInbox = userNotificationService.saveBroadcastToInbox("ADMIN_PUSH", title, body, imageUrl);
+        } catch (Exception e) {
+            log.error("Admin push inbox'ga yozilmadi: {}", e.getMessage());
+        }
+
         int[] result = notificationService.sendCustomNotification(title, body, imageUrl, sound, extraData);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Push-notification yuborildi",
                 "success", result[0],
-                "failed", result[1]
+                "failed", result[1],
+                "savedToInbox", savedToInbox
         ));
     }
 
