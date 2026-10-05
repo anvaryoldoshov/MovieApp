@@ -62,7 +62,7 @@ public class UserNotificationService {
      * Shunda foydalanuvchi bildirishnomani o'chirib yuborsa ham, ilova ichida ko'ra oladi.
      */
     @Transactional
-    public int saveBroadcastToInbox(String type, String title, String body, String imageUrl) {
+    public int saveBroadcastToInbox(String type, String title, String body, String imageUrl, Long seriesId) {
         String safeBody = body != null && body.length() > 1000 ? body.substring(0, 1000) : body;
         List<UserNotification> rows = userRepo.findAllIds().stream()
                 .map(id -> UserNotification.builder()
@@ -71,6 +71,7 @@ public class UserNotificationService {
                         .title(title)
                         .body(safeBody)
                         .imageUrl(imageUrl)
+                        .seriesId(seriesId)
                         .read(false)
                         .build())
                 .toList();

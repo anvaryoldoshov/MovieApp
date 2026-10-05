@@ -68,7 +68,8 @@ public class AdminNotificationController {
         // push'ni o'chirib yuborsa, uni qayta topa olmaydi. Xato bo'lsa ham push yuborilaveradi.
         int savedToInbox = 0;
         try {
-            savedToInbox = userNotificationService.saveBroadcastToInbox("ADMIN_PUSH", title, body, imageUrl);
+            savedToInbox = userNotificationService.saveBroadcastToInbox("ADMIN_PUSH", title, body, imageUrl,
+                    parseSeriesId(extraData));
         } catch (Exception e) {
             log.error("Admin push inbox'ga yozilmadi: {}", e.getMessage());
         }
@@ -123,6 +124,17 @@ public class AdminNotificationController {
     @GetMapping("/sounds")
     public ResponseEntity<List<String>> getRecentSounds() {
         return ResponseEntity.ok(notificationService.getRecentSounds());
+    }
+
+    // Admin "data" ichida {"seriesId": "30"} bersa, ilovada bildirishnoma bosilganda shu serial ochiladi.
+    private static Long parseSeriesId(Map<String, String> extraData) {
+        if (extraData == null) return null;
+        try {
+            String v = extraData.get("seriesId");
+            return v == null || v.isBlank() ? null : Long.parseLong(v.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private Map<String, String> parseExtraData(String dataJson) throws Exception {

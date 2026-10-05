@@ -118,6 +118,21 @@ public class SeriesService {
     }
 
     /**
+     * Foydalanuvchi like bosgan (va hozir ko'rinadigan) seriallar.
+     */
+    public List<SeriesDto> getLikedSeries(Long userId) {
+        return seriesLikeRepo.findByUser_IdOrderByCreatedAtDesc(userId).stream()
+                .map(SeriesLike::getSeries)
+                .filter(s -> s != null && VISIBLE_STATUSES.contains(s.getStatus()))
+                .map(s -> {
+                    SeriesDto dto = seriesMapper.toDto(s);
+                    dto.setHasEpisode(episodeRepo.existsBySeriesId(s.getId()));
+                    return dto;
+                })
+                .toList();
+    }
+
+    /**
      * Foydalanuvchi serialga like bosadi/olib tashlaydi (toggle).
      */
     @Transactional

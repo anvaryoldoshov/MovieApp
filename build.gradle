@@ -87,3 +87,8 @@ tasks.named('asciidoctor') {
     inputs.dir snippetsDir
     dependsOn test
 }
+
+// Manba kodi UTF-8 (izohlar va push matnlaridagi o'zbekcha harflar/emoji buzilmasligi uchun)
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

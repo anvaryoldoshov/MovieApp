@@ -15,6 +15,7 @@ public class UserNotificationDto {
     private String title;
     private String body;
     private String imageUrl;
+    private Long seriesId;
     private boolean read;
     private LocalDateTime createdAt;
 }

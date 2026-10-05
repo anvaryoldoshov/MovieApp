@@ -1,5 +1,6 @@
 package com.example.movieapp.service;
 
+import com.example.movieapp.dto.MySubscriptionDto;
 import com.example.movieapp.entities.MovieAccess;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
@@ -49,6 +50,41 @@ public class MovieAccessService {
 
         log.debug("Movie access has been given: User {} for Series {}", user.getUsername(), series.getTitle());
         return movieAccessRepository.save(access);
+    }
+
+    /**
+     * Foydalanuvchining obuna holati (mobil ilova profili uchun).
+     */
+    public MySubscriptionDto getMySubscription(Long userId) {
+        User user = userRepo.findById(userId).orElseThrow(UserNotFoundException::new);
+        LocalDate today = LocalDate.now();
+
+        LocalDate subEnd = user.getSubscriptionEndDate();
+        boolean active = Boolean.TRUE.equals(user.getSubscription())
+                && (subEnd == null || !today.isAfter(subEnd));
+
+        List<MySubscriptionDto.SeriesAccess> series = movieAccessRepository.findByUserIdAndPaidTrue(userId)
+                .stream()
+                .filter(a -> a.getAccessEndDate() == null || !today.isAfter(a.getAccessEndDate()))
+                .map(a -> MySubscriptionDto.SeriesAccess.builder()
+                        .seriesId(a.getMovie().getId())
+                        .title(a.getMovie().getTitle())
+                        .imagePath(a.getMovie().getImagePath())
+                        .endDate(a.getAccessEndDate())
+                        .daysLeft(daysLeft(today, a.getAccessEndDate()))
+                        .build())
+                .toList();
+
+        return MySubscriptionDto.builder()
+                .active(active)
+                .endDate(active ? subEnd : null)
+                .daysLeft(active ? daysLeft(today, subEnd) : 0)
+                .series(series)
+                .build();
+    }
+
+    private static long daysLeft(LocalDate today, LocalDate end) {
+        return end == null ? 0 : Math.max(0, java.time.temporal.ChronoUnit.DAYS.between(today, end));
     }
 
     public List<Series> getUserAccessedSeries(Long userId) {
@@ -267,4 +303,4 @@ public class MovieAccessService {
         log.debug("Access denied for user {} to serial {}.", userId, serialId);
         return false;
     }
-}
+}

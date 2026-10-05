@@ -4,14 +4,20 @@ import com.example.movieapp.dto.BaseMessage;
 import com.example.movieapp.dto.DeleteAccountConfirmRequest;
 import com.example.movieapp.dto.DeleteAccountRequest;
 import com.example.movieapp.dto.FcmTokenRequest;
+import com.example.movieapp.dto.MySubscriptionDto;
+import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.InvalidDeleteCodeException;
+import com.example.movieapp.exception.UserNotFoundException;
+import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.AccountDeletionCodeService;
 import com.example.movieapp.service.EmailService;
+import com.example.movieapp.service.MovieAccessService;
 import com.example.movieapp.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,6 +30,16 @@ public class AccountController {
     private final UserService userService;
     private final AccountDeletionCodeService deletionCodeService;
     private final EmailService emailService;
+    private final MovieAccessService movieAccessService;
+    private final UserRepo userRepo;
+
+    // Mobil ilova profili: umumiy obuna holati va alohida sotib olingan seriallar.
+    @GetMapping("/account/subscription")
+    public ResponseEntity<MySubscriptionDto> mySubscription() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepo.findByEmail(email).orElseThrow(UserNotFoundException::new);
+        return ResponseEntity.ok(movieAccessService.getMySubscription(user.getId()));
+    }
 
     // Ilova ichidan, JWT bilan autentifikatsiya qilingan foydalanuvchi o'z hisobini o'chiradi.
     @DeleteMapping("/account/me")

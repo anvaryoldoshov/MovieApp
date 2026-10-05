@@ -30,6 +30,9 @@ public class UserNotification {
 
     private String imageUrl;
 
+    // Bildirishnoma bosilganda ochiladigan serial (yangi serial/qism xabarlari uchun, ixtiyoriy).
+    private Long seriesId;
+
     @Builder.Default
     private boolean read = false;
 

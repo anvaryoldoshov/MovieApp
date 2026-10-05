@@ -70,6 +70,14 @@ public class SeriesController {
         return ResponseEntity.ok(seriesService.getDetails(serialId, canWatch, user.getId()));
     }
 
+    // Mobil ilova "Sevimlilar" sahifasi: foydalanuvchi like bosgan seriallar.
+    @GetMapping("/liked")
+    public ResponseEntity<List<SeriesDto>> likedSeries(Authentication authentication) {
+        User user = userRepo.findByEmail(authentication.getName())
+                .orElseThrow(UserNotFoundException::new);
+        return ResponseEntity.ok(seriesService.getLikedSeries(user.getId()));
+    }
+
     @PostMapping("/{serialId}/like")
     public ResponseEntity<?> toggleLike(@PathVariable Long serialId, Authentication authentication) {
         String email = authentication.getName();
