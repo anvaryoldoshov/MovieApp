@@ -220,11 +220,15 @@ public class MovieAccessService {
         Series series = seriesRepo.findById(seriesId)
                 .orElseThrow(SeriesNotFoundException::new);
 
-        LocalDate endDate = LocalDate.now().plusDays(accessDays);
-
         MovieAccess access = movieAccessRepository
                 .findByUser_IdAndMovie_IdAndPaidIsTrue(userId, seriesId)
                 .orElseGet(MovieAccess::new);
+
+        // Muddati hali tugamagan bo'lsa — yangi kunlar qolgan kunlar ustiga qo'shiladi.
+        LocalDate today = LocalDate.now();
+        LocalDate currentEnd = access.getAccessEndDate();
+        LocalDate endDate = (currentEnd != null && !today.isAfter(currentEnd) ? currentEnd : today)
+                .plusDays(accessDays);
 
         access.setUser(user);
         access.setMovie(series);
@@ -233,14 +237,8 @@ public class MovieAccessService {
         access.setReminderSent(false);
         movieAccessRepository.save(access);
 
-        user.setSubscription(true);
-        if (user.getSubscriptionStartDate() == null) {
-            user.setSubscriptionStartDate(LocalDate.now());
-        }
-        if (user.getSubscriptionEndDate() == null || user.getSubscriptionEndDate().isBefore(endDate)) {
-            user.setSubscriptionEndDate(endDate);
-        }
-        userRepo.save(user);
+        // Diqqat: user.subscription ga tegmaymiz. Bitta serial sotib olish faqat shu serialni
+        // ochadi; umumiy obuna (subscriptionBased seriallar) faqat SubscriptionPlan to'lovi orqali beriladi.
 
         log.info("Pullik kirish berildi: user={}, series={}, kunlar={}", userId, seriesId, accessDays);
     }
