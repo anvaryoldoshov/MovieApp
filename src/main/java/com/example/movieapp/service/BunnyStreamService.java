@@ -1,15 +1,4 @@
 package com.example.movieapp.service;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,6 +9,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -27,27 +25,36 @@ import java.util.regex.Pattern;
 public class BunnyStreamService {
 
     // https://vz-xxxxx.b-cdn.net/{videoGuid}/playlist.m3u8
-    private static final Pattern VIDEO_URL_PATTERN =
-            Pattern.compile("(https?://[^/]+)(/[0-9a-fA-F\\-]{36}/)");
+    private static final Pattern VIDEO_URL_PATTERN = Pattern.compile("(https?://[^/]+)(/[0-9a-fA-F\\-]{36}/)");
 
-    private static final Pattern UUID_PATTERN =
-            Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+    private static final Pattern UUID_PATTERN = Pattern
+            .compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
-    // Video nomida uchraydigan RAQAMLAR ICHIDAN BIRINCHISINI epizod raqami sifatida oladi -
-    // raqam nomning boshida ("44ayyubiy" -> 44) yoki oxirida ("ayyubiy45" -> 45) bo'lishidan
-    // qat'i nazar ishlaydi. Birinchisi tanlanadi, chunki fayl nomiga keyinchalik qo'shilgan
-    // versiya/nusxa belgilari (masalan "83Mehmed_2.mp4" dagi "_2") oxirida bo'lib, ular bilan
-    // adashtirmaslik kerak - asosiy epizod raqami deyarli har doim nomning boshida keladi.
+    // Video nomida uchraydigan RAQAMLAR ICHIDAN BIRINCHISINI epizod raqami sifatida
+    // oladi -
+    // raqam nomning boshida ("44ayyubiy" -> 44) yoki oxirida ("ayyubiy45" -> 45)
+    // bo'lishidan
+    // qat'i nazar ishlaydi. Birinchisi tanlanadi, chunki fayl nomiga keyinchalik
+    // qo'shilgan
+    // versiya/nusxa belgilari (masalan "83Mehmed_2.mp4" dagi "_2") oxirida bo'lib,
+    // ular bilan
+    // adashtirmaslik kerak - asosiy epizod raqami deyarli har doim nomning boshida
+    // keladi.
     private static final Pattern FIRST_NUMBER_PATTERN = Pattern.compile("(\\d+)");
 
-    // Bunny'ga yuklashda video nomi ko'pincha original fayl nomi (kengaytmasi bilan) bo'lib
-    // qoladi (masalan "Ayyubiy 32.mp4") - raqamni izlashdan oldin shu kengaytmani olib tashlaymiz,
-    // aks holda kengaytmadagi raqamlar (masalan "mp4" dagi "4") chalkashtirib yuborishi mumkin.
-    private static final Pattern TRAILING_FILE_EXTENSION_PATTERN =
-            Pattern.compile("(?i)\\.(mp4|mkv|mov|avi|wmv|flv|webm|m4v|ts|m3u8|mpg|mpeg)$");
+    // Bunny'ga yuklashda video nomi ko'pincha original fayl nomi (kengaytmasi
+    // bilan) bo'lib
+    // qoladi (masalan "Ayyubiy 32.mp4") - raqamni izlashdan oldin shu kengaytmani
+    // olib tashlaymiz,
+    // aks holda kengaytmadagi raqamlar (masalan "mp4" dagi "4") chalkashtirib
+    // yuborishi mumkin.
+    private static final Pattern TRAILING_FILE_EXTENSION_PATTERN = Pattern
+            .compile("(?i)\\.(mp4|mkv|mov|avi|wmv|flv|webm|m4v|ts|m3u8|mpg|mpeg)$");
 
-    // Havola bir necha soatlik pleer sessiyasi davomida ishlashi uchun yetarli, lekin
-    // taqsimlab yuborilgan holda uzoq muddat ishlamasligi uchun qisqa muddatga cheklangan.
+    // Havola bir necha soatlik pleer sessiyasi davomida ishlashi uchun yetarli,
+    // lekin
+    // taqsimlab yuborilgan holda uzoq muddat ishlamasligi uchun qisqa muddatga
+    // cheklangan.
     private static final long TOKEN_TTL_SECONDS = 4 * 60 * 60;
 
     private final RestTemplate restTemplate;
@@ -61,11 +68,13 @@ public class BunnyStreamService {
     @Value("${bunny.stream.api-url:https://video.bunnycdn.com/library}")
     private String apiUrl;
 
-    // Bunny dashboard > Pull Zone/Stream > Security > Token Authentication'dagi maxfiy kalit.
+    // Bunny dashboard > Pull Zone/Stream > Security > Token Authentication'dagi
+    // maxfiy kalit.
     @Value("${bunny.stream.token-auth-key:}")
     private String tokenAuthKey;
 
-    // Tizimda hali birorta ham epizod bo'lmaganda (mavjud videodan CDN manzilini o'qib
+    // Tizimda hali birorta ham epizod bo'lmaganda (mavjud videodan CDN manzilini
+    // o'qib
     // bo'lmaydi) ishlatiladigan zaxira CDN bazaviy manzili.
     @Value("${bunny.stream.cdn-base-url:}")
     private String configuredCdnBaseUrl;
@@ -77,8 +86,10 @@ public class BunnyStreamService {
     }
 
     /**
-     * Bunny Stream kutubxonasidagi (yoki collectionId berilsa, faqat shu Collection ichidagi)
-     * barcha videolarni yuklangan sana bo'yicha (eskisi birinchi) ro'yxatini qaytaradi.
+     * Bunny Stream kutubxonasidagi (yoki collectionId berilsa, faqat shu Collection
+     * ichidagi)
+     * barcha videolarni yuklangan sana bo'yicha (eskisi birinchi) ro'yxatini
+     * qaytaradi.
      * Epizodga hali biriktirilmagan videoni topish uchun ishlatiladi.
      */
     public List<BunnyLibraryVideo> listLibraryVideos(String collectionId) {
@@ -95,7 +106,8 @@ public class BunnyStreamService {
         headers.set("accept", "application/json");
 
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers),
+                    Map.class);
             Map<?, ?> body = response.getBody();
             Object items = body == null ? null : body.get("items");
             if (!(items instanceof List<?> itemList)) {
@@ -115,9 +127,12 @@ public class BunnyStreamService {
     }
 
     /**
-     * Admin Bunny Collection'ning ID'sini yoki uning dashboard havolasini kiritishi mumkin -
-     * ikkalasidan ham GUID'ni ajratib oladi. GUID formatiga mos kelmasa, kiritilgan qiymatni
-     * o'zgarishsiz qaytaradi (Bunny kelajakda boshqa ID formatidan foydalansa ham ishlashi uchun).
+     * Admin Bunny Collection'ning ID'sini yoki uning dashboard havolasini kiritishi
+     * mumkin -
+     * ikkalasidan ham GUID'ni ajratib oladi. GUID formatiga mos kelmasa, kiritilgan
+     * qiymatni
+     * o'zgarishsiz qaytaradi (Bunny kelajakda boshqa ID formatidan foydalansa ham
+     * ishlashi uchun).
      */
     public String extractCollectionId(String input) {
         if (input == null || input.isBlank()) {
@@ -129,11 +144,16 @@ public class BunnyStreamService {
     }
 
     /**
-     * Video nomidagi raqamni epizod raqami sifatida ajratib oladi (masalan "Ayyubiy 32",
-     * "ayubiy32", "44ayyubiy" yoki "83Mehmed_2" -> mos ravishda 32, 32, 44, 83). Raqam
-     * nomning boshida yoki oxirida bo'lishi mumkin - nomning matn qismidagi imlo xatolariga
-     * e'tibor berilmaydi, birinchi uchragan raqamlar guruhiga tayaniladi (fayl nomiga
-     * keyinchalik qo'shilgan "_2" kabi versiya belgilari bilan adashtirmaslik uchun).
+     * Video nomidagi raqamni epizod raqami sifatida ajratib oladi (masalan "Ayyubiy
+     * 32",
+     * "ayubiy32", "44ayyubiy" yoki "83Mehmed_2" -> mos ravishda 32, 32, 44, 83).
+     * Raqam
+     * nomning boshida yoki oxirida bo'lishi mumkin - nomning matn qismidagi imlo
+     * xatolariga
+     * e'tibor berilmaydi, birinchi uchragan raqamlar guruhiga tayaniladi (fayl
+     * nomiga
+     * keyinchalik qo'shilgan "_2" kabi versiya belgilari bilan adashtirmaslik
+     * uchun).
      */
     public Integer extractEpisodeNumberFromTitle(String title) {
         if (title == null) {
@@ -152,8 +172,10 @@ public class BunnyStreamService {
     }
 
     /**
-     * Mavjud playback URL'dan Bunny CDN bazaviy manzilini (masalan https://vz-xxxxx.b-cdn.net)
-     * ajratib oladi - yangi topilgan video GUID uchun to'liq URL yasashda ishlatiladi.
+     * Mavjud playback URL'dan Bunny CDN bazaviy manzilini (masalan
+     * https://vz-xxxxx.b-cdn.net)
+     * ajratib oladi - yangi topilgan video GUID uchun to'liq URL yasashda
+     * ishlatiladi.
      */
     public Optional<String> extractBaseUrl(String videoUrl) {
         if (videoUrl == null) {
@@ -180,7 +202,8 @@ public class BunnyStreamService {
     }
 
     /**
-     * Video URL'dan Bunny video GUID'ini ajratib oladi (masalan mavjud epizodlar orasida
+     * Video URL'dan Bunny video GUID'ini ajratib oladi (masalan mavjud epizodlar
+     * orasida
      * qaysi Bunny videolari allaqachon ishlatilganini aniqlash uchun).
      */
     public String extractVideoGuid(String videoUrl) {
@@ -188,9 +211,12 @@ public class BunnyStreamService {
     }
 
     /**
-     * Bunny Stream API orqali video haqida ma'lumot oladi: davomiylik (soniya), hajm (bayt)
-     * va Bunny avtomatik yaratgan thumbnail (muddati cheklangan token bilan imzolangan,
-     * faqat bir martalik yuklab olish uchun - o'zimizning serverga saqlab qo'yiladi).
+     * Bunny Stream API orqali video haqida ma'lumot oladi: davomiylik (soniya),
+     * hajm (bayt)
+     * va Bunny avtomatik yaratgan thumbnail (muddati cheklangan token bilan
+     * imzolangan,
+     * faqat bir martalik yuklab olish uchun - o'zimizning serverga saqlab
+     * qo'yiladi).
      * Sozlamalar yo'q yoki so'rov muvaffaqiyatsiz bo'lsa, bo'sh Optional qaytaradi.
      */
     public Optional<BunnyVideoInfo> fetchVideoInfo(String videoUrl) {
@@ -211,7 +237,8 @@ public class BunnyStreamService {
         headers.set("accept", "application/json");
 
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers),
+                    Map.class);
             Map<?, ?> body = response.getBody();
             if (body == null || body.get("length") == null || body.get("storageSize") == null) {
                 log.warn("Bunny API javobida 'length'/'storageSize' topilmadi: {}", body);
@@ -222,7 +249,9 @@ public class BunnyStreamService {
             long sizeBytes = ((Number) body.get("storageSize")).longValue();
 
             if (durationSeconds <= 0 || sizeBytes <= 0) {
-                log.warn("Bunny'da video hali qayta ishlanmoqda (encoding tugamagan), keyinroq backfill orqali qayta urinib ko'riladi: videoId={}", videoId);
+                log.warn(
+                        "Bunny'da video hali qayta ishlanmoqda (encoding tugamagan), keyinroq backfill orqali qayta urinib ko'riladi: videoId={}",
+                        videoId);
                 return Optional.empty();
             }
 
@@ -242,19 +271,26 @@ public class BunnyStreamService {
             return null;
         }
         String baseUrl = matcher.group(1);
-        String fileName = (thumbnailFileName == null || thumbnailFileName.isBlank()) ? "thumbnail.jpg" : thumbnailFileName;
+        String fileName = (thumbnailFileName == null || thumbnailFileName.isBlank()) ? "thumbnail.jpg"
+                : thumbnailFileName;
         return signPlaybackUrl(baseUrl + "/" + videoId + "/" + fileName);
     }
 
     /**
-     * HLS playback URL'ga (m3u8) muddati cheklangan token qo'shadi, shunda foydalanuvchiga
-     * berilgan havola faqat cheklangan vaqt davomida ishlaydi va taqsimlab yuborilsa ham
-     * tez orada yaroqsiz bo'lib qoladi. Token butun video papkasi (guid) uchun imzolanadi,
+     * HLS playback URL'ga (m3u8) muddati cheklangan token qo'shadi, shunda
+     * foydalanuvchiga
+     * berilgan havola faqat cheklangan vaqt davomida ishlaydi va taqsimlab
+     * yuborilsa ham
+     * tez orada yaroqsiz bo'lib qoladi. Token butun video papkasi (guid) uchun
+     * imzolanadi,
      * shu bois playlist ichidagi .ts segmentlar ham qo'shimcha so'rovsiz ishlaydi.
      *
-     * Ishlashi uchun Bunny'da (Stream kutubxonasi bog'langan Pull Zone > Security) Token
-     * Authentication yoqilgan va bu yerdagi kalit bilan bir xil bo'lishi shart. Kalit
-     * sozlanmagan bo'lsa, havola imzolanmasdan qaytariladi (mavjud xulq-atvor saqlanadi).
+     * Ishlashi uchun Bunny'da (Stream kutubxonasi bog'langan Pull Zone > Security)
+     * Token
+     * Authentication yoqilgan va bu yerdagi kalit bilan bir xil bo'lishi shart.
+     * Kalit
+     * sozlanmagan bo'lsa, havola imzolanmasdan qaytariladi (mavjud xulq-atvor
+     * saqlanadi).
      */
     public String signPlaybackUrl(String videoUrl) {
         if (tokenAuthKey.isBlank() || videoUrl == null) {

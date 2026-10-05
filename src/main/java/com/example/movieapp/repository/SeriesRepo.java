@@ -1,10 +1,9 @@
 package com.example.movieapp.repository;
 
-import com.example.movieapp.entities.Series;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-
-import java.util.List;
+import com.example.movieapp.entities.Series;
 
 public interface SeriesRepo extends JpaRepository<Series, Long> {
 

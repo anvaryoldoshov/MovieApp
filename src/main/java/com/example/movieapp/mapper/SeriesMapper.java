@@ -1,11 +1,11 @@
 package com.example.movieapp.mapper;
 
-import com.example.movieapp.dto.SeriesDto;
-import com.example.movieapp.entities.Series;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+import com.example.movieapp.dto.SeriesDto;
+import com.example.movieapp.entities.Series;
 
 @Mapper(componentModel = "spring", uses = GenreMapper.class)
 public interface SeriesMapper {
@@ -25,7 +25,8 @@ public interface SeriesMapper {
 
     @Named("seriesDtoToEntityById")
     default Series seriesDtoToEntityById(SeriesDto dto) {
-        if (dto == null || dto.getId() == null) return null;
+        if (dto == null || dto.getId() == null)
+            return null;
         Series series = new Series();
         series.setId(dto.getId());
         return series;
