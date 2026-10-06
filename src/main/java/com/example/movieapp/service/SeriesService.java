@@ -90,14 +90,14 @@ public class SeriesService {
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
         List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
 
-        // Bonus/bepul epizodlar (serialda "birinchi N ta epizod bepul" siyosati bo'yicha) obunasiz ham ochiq
-        Integer freeCount = series.getFreeEpisodesCount();
+        // Bonus/bepul epizodlar ("dastlabki N ta qism" — serialdagi tartib bo'yicha) obunasiz ham ochiq
+        Set<Long> freeIds = FreeEpisodes.ids(episodes, series.getFreeEpisodesCount());
         Map<Long, Integer> progressMap = userId != null
                 ? watchProgressService.getProgressMap(userId, parts.stream().map(EpisodePartDto::getEpisodeId).toList())
                 : Map.of();
         for (int i = 0; i < parts.size(); i++) {
             EpisodePartDto part = parts.get(i);
-            boolean isFree = freeCount != null && part.getEpisodeNumber() <= freeCount;
+            boolean isFree = freeIds.contains(part.getEpisodeId());
             part.setFree(isFree);
             part.setHasAccess(hasAccess || isFree);
             part.setWatchedSeconds(progressMap.getOrDefault(part.getEpisodeId(), 0));

@@ -49,7 +49,7 @@ public class EpisodeService {
         }
 
         EpisodeDto dto = episodeMapper.toEpisodeDto(episode);
-        dto.setFree(isEpisodeFree(episode.getSeries(), episode.getEpisodeNumber()));
+        dto.setFree(isEpisodeFree(episode.getSeries(), episode.getId()));
         return dto;
     }
 
@@ -82,7 +82,7 @@ public class EpisodeService {
         Episode saved = episodeRepo.save(episode);
 
         EpisodeDto resultDto = episodeMapper.toEpisodeDto(saved);
-        resultDto.setFree(isEpisodeFree(series, saved.getEpisodeNumber()));
+        resultDto.setFree(isEpisodeFree(series, saved.getId()));
         return resultDto;
     }
 
@@ -136,9 +136,13 @@ public class EpisodeService {
      * qarab bepul-emasligini hisoblaydi. Bu holat saqlanmaydi - har doim jonli hisoblanadi,
      * shuning uchun freeEpisodesCount o'zgarganda barcha epizodlar uchun avtomatik yangilanadi.
      */
-    private boolean isEpisodeFree(Series series, Integer episodeNumber) {
-        Integer freeCount = series.getFreeEpisodesCount();
-        return episodeNumber != null && freeCount != null && episodeNumber <= freeCount;
+    /** "Dastlabki N ta qism" — serialdagi tartib bo'yicha (FreeEpisodes), qism raqami bo'yicha emas. */
+    private boolean isEpisodeFree(Series series, Long episodeId) {
+        if (episodeId == null || series.getFreeEpisodesCount() == null || series.getFreeEpisodesCount() <= 0) {
+            return false;
+        }
+        return FreeEpisodes.ids(episodeRepo.findBySeriesId(series.getId()), series.getFreeEpisodesCount())
+                .contains(episodeId);
     }
 
     private Optional<BunnyStreamService.BunnyVideoInfo> applyDurationFromBunny(Episode episode, String videoUrl) {
@@ -229,7 +233,7 @@ public class EpisodeService {
                     Episode updated = episodeRepo.save(episode);
 
                     EpisodeDto resultDto = episodeMapper.toEpisodeDto(updated);
-                    resultDto.setFree(isEpisodeFree(updated.getSeries(), updated.getEpisodeNumber()));
+                    resultDto.setFree(isEpisodeFree(updated.getSeries(), updated.getId()));
 
                     return ResponseEntity.ok(resultDto);
                 })
@@ -247,11 +251,14 @@ public class EpisodeService {
 
     public List<EpisodeDto> getEpisodesBySeries(Long seriesId) {
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
+        Set<Long> freeIds = episodes.isEmpty()
+                ? Set.of()
+                : FreeEpisodes.ids(episodes, episodes.get(0).getSeries().getFreeEpisodesCount());
 
         return episodes.stream()
                 .map(episode -> {
                     EpisodeDto dto = episodeMapper.toEpisodeDto(episode);
-                    dto.setFree(isEpisodeFree(episode.getSeries(), episode.getEpisodeNumber()));
+                    dto.setFree(freeIds.contains(episode.getId()));
                     return dto;
                 })
                 .toList();
@@ -402,7 +409,13 @@ public class EpisodeService {
      */
     public void finalizeVideoUrlForAccess(EpisodeDto dto, boolean hasAccess) {
         dto.setHasAccess(hasAccess);
-        dto.setVideoUrl(bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()));
+        // Pullik qismning havolasi faqat kirish huquqi bo'lsa yoki qism bepul bo'lsa beriladi —
+        // aks holda API orqali havolani olib, to'lovsiz ko'rish mumkin edi.
+        if (hasAccess || dto.isFree()) {
+            dto.setVideoUrl(bunnyStreamService.signPlaybackUrl(dto.getVideoUrl()));
+        } else {
+            dto.setVideoUrl(null);
+        }
     }
 
 }
