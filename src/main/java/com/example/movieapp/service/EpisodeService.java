@@ -131,18 +131,10 @@ public class EpisodeService {
         return seasons.get(seasons.size() - 1);
     }
 
-    /**
-     * Serialda "birinchi N ta epizod bepul" siyosati belgilangan bo'lsa, epizod raqamiga
-     * qarab bepul-emasligini hisoblaydi. Bu holat saqlanmaydi - har doim jonli hisoblanadi,
-     * shuning uchun freeEpisodesCount o'zgarganda barcha epizodlar uchun avtomatik yangilanadi.
-     */
-    /** "Dastlabki N ta qism" — serialdagi tartib bo'yicha (FreeEpisodes), qism raqami bo'yicha emas. */
+    /** Serialning birinchi qismimi (FreeEpisodes) — saqlanmaydi, har doim jonli hisoblanadi. */
     private boolean isEpisodeFree(Series series, Long episodeId) {
-        if (episodeId == null || series.getFreeEpisodesCount() == null || series.getFreeEpisodesCount() <= 0) {
-            return false;
-        }
-        return FreeEpisodes.ids(episodeRepo.findBySeriesId(series.getId()), series.getFreeEpisodesCount())
-                .contains(episodeId);
+        return episodeId != null
+                && FreeEpisodes.ids(episodeRepo.findBySeriesId(series.getId())).contains(episodeId);
     }
 
     private Optional<BunnyStreamService.BunnyVideoInfo> applyDurationFromBunny(Episode episode, String videoUrl) {
@@ -251,9 +243,7 @@ public class EpisodeService {
 
     public List<EpisodeDto> getEpisodesBySeries(Long seriesId) {
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
-        Set<Long> freeIds = episodes.isEmpty()
-                ? Set.of()
-                : FreeEpisodes.ids(episodes, episodes.get(0).getSeries().getFreeEpisodesCount());
+        Set<Long> freeIds = FreeEpisodes.ids(episodes);
 
         return episodes.stream()
                 .map(episode -> {

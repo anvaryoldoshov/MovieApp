@@ -28,7 +28,10 @@ public class SeriesDto {
     private List<Long> genreIds;   // janrlarni biriktirish uchun (create/update)
     private List<GenreDto> genres; // javobda ko'rsatish uchun
 
-    private Integer freeEpisodesCount; // birinchi N ta epizod obunasiz ham ochiq (null/0 = yo'q)
+    // Platformada har serialning faqat birinchi qismi bepul (FreeEpisodes). Qo'shimcha bepul
+    // qismlar Telegram kanalda bo'lishi mumkin — ilova shu havolani va qismlar sonini ko'rsatadi.
+    private String telegramFreeUrl;   // bo'sh = Telegram'da bepul qism yo'q
+    private Integer telegramFreeCount; // Telegram'dagi bepul qismlar soni (ko'rsatish uchun)
 
     private String bunnyCollectionId; // Bunny Stream Collection ID yoki URL (server tomonda tozalanadi)
 

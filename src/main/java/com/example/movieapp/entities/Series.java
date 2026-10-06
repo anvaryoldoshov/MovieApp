@@ -32,7 +32,10 @@ public class Series {
 
     private Integer sortOrder; // adminda ro'yxatdagi tartibi (kichik = birinchi)
 
-    private Integer freeEpisodesCount; // birinchi N ta epizod obunasiz ham ochiq (null/0 = yo'q)
+    // Platformada har serialning faqat birinchi qismi bepul (FreeEpisodes). Qo'shimcha bepul
+    // qismlar Telegram kanalda bo'lishi mumkin — ilova shu havolani va qismlar sonini ko'rsatadi.
+    private String telegramFreeUrl;   // bo'sh = Telegram'da bepul qism yo'q
+    private Integer telegramFreeCount; // Telegram'dagi bepul qismlar soni (ko'rsatish uchun)
 
     private String bunnyCollectionId; // Bunny Stream'dagi shu serialga tegishli Collection GUID'i (ixtiyoriy)
 

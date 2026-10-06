@@ -8,11 +8,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * "Dastlabki N ta qism bepul" qoidasi.
+ * Bepul qism qoidasi: har serialning BIRINCHI qismi doim bepul, qolganlari pullik.
  *
- * Qism raqami bo'yicha emas, serialdagi TARTIB bo'yicha hisoblanadi: fasl raqami, keyin qism
- * raqami bo'yicha saralab, birinchi N tasi bepul. Oldin "qism raqami <= N" deb tekshirilardi —
- * qismlari 1 dan emas (masalan 39 dan) boshlanadigan seriallarda birorta qism bepul bo'lmay qolardi.
+ * "Birinchi" — qism raqami 1 emas, serialdagi TARTIB bo'yicha birinchisi: fasl raqami, keyin qism
+ * raqami bo'yicha saralanadi (qismlar 39 dan boshlansa — 39-qism bepul).
+ * Qo'shimcha bepul qismlar platformada emas, Telegram kanalda (Series.telegramFreeUrl).
  */
 public final class FreeEpisodes {
 
@@ -25,14 +25,16 @@ public final class FreeEpisodes {
             .thenComparing(e -> e.getEpisodeNumber() != null ? e.getEpisodeNumber() : Integer.MAX_VALUE)
             .thenComparing(Episode::getId, Comparator.nullsLast(Comparator.naturalOrder()));
 
-    /** Serialning bepul qismlari id'lari. freeCount null yoki 0 bo'lsa — bo'sh to'plam. */
-    public static Set<Long> ids(List<Episode> seriesEpisodes, Integer freeCount) {
-        if (freeCount == null || freeCount <= 0 || seriesEpisodes == null) {
+    public static final int FREE_COUNT = 1;
+
+    /** Serialning bepul qismi id'si (bo'sh serialda — bo'sh to'plam). */
+    public static Set<Long> ids(List<Episode> seriesEpisodes) {
+        if (seriesEpisodes == null) {
             return Set.of();
         }
         return seriesEpisodes.stream()
                 .sorted(ORDER)
-                .limit(freeCount)
+                .limit(FREE_COUNT)
                 .map(Episode::getId)
                 .collect(Collectors.toSet());
     }

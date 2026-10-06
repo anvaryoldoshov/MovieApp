@@ -19,5 +19,7 @@ public class GetDetailsResponse {
     private long likeCount;
     private boolean liked;
     private Long viewCount;
+    private String telegramFreeUrl;   // Telegram'dagi bepul qismlar kanali (bo'sh = yo'q)
+    private Integer telegramFreeCount;
 }
 

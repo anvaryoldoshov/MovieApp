@@ -95,7 +95,8 @@ public class SeriesController {
                                           @RequestParam(value = "monthlyPrice", required = false) Long monthlyPrice,
                                           @RequestParam(value = "quarterlyPrice", required = false) Long quarterlyPrice,
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
-                                          @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
+                                          @RequestParam(value = "telegramFreeUrl", required = false) String telegramFreeUrl,
+                                          @RequestParam(value = "telegramFreeCount", required = false) Integer telegramFreeCount,
                                           @RequestParam(value = "bunnyCollectionId", required = false) String bunnyCollectionId,
                                           @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") Boolean subscriptionBased,
                                           @RequestParam("image") MultipartFile image) {
@@ -107,7 +108,8 @@ public class SeriesController {
         dto.setMonthlyPrice(monthlyPrice);
         dto.setQuarterlyPrice(quarterlyPrice);
         dto.setGenreIds(genreIds);
-        dto.setFreeEpisodesCount(freeEpisodesCount);
+        dto.setTelegramFreeUrl(telegramFreeUrl);
+        dto.setTelegramFreeCount(telegramFreeCount);
         dto.setBunnyCollectionId(bunnyCollectionId);
         dto.setSubscriptionBased(subscriptionBased);
         dto.setImagePath(imagePath);
@@ -123,7 +125,8 @@ public class SeriesController {
                                           @RequestParam(value = "monthlyPrice", required = false) Long monthlyPrice,
                                           @RequestParam(value = "quarterlyPrice", required = false) Long quarterlyPrice,
                                           @RequestParam(value = "genreIds", required = false) List<Long> genreIds,
-                                          @RequestParam(value = "freeEpisodesCount", required = false) Integer freeEpisodesCount,
+                                          @RequestParam(value = "telegramFreeUrl", required = false) String telegramFreeUrl,
+                                          @RequestParam(value = "telegramFreeCount", required = false) Integer telegramFreeCount,
                                           @RequestParam(value = "bunnyCollectionId", required = false) String bunnyCollectionId,
                                           @RequestParam(value = "subscriptionBased", required = false, defaultValue = "false") Boolean subscriptionBased,
                                           @RequestParam(value = "image", required = false) MultipartFile image) {
@@ -137,7 +140,8 @@ public class SeriesController {
         dto.setMonthlyPrice(monthlyPrice);
         dto.setQuarterlyPrice(quarterlyPrice);
         dto.setGenreIds(genreIds);
-        dto.setFreeEpisodesCount(freeEpisodesCount);
+        dto.setTelegramFreeUrl(telegramFreeUrl);
+        dto.setTelegramFreeCount(telegramFreeCount);
         dto.setBunnyCollectionId(bunnyCollectionId);
         dto.setSubscriptionBased(subscriptionBased);
 

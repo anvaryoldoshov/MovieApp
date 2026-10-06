@@ -90,8 +90,8 @@ public class SeriesService {
         List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
         List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
 
-        // Bonus/bepul epizodlar ("dastlabki N ta qism" — serialdagi tartib bo'yicha) obunasiz ham ochiq
-        Set<Long> freeIds = FreeEpisodes.ids(episodes, series.getFreeEpisodesCount());
+        // Har serialning birinchi qismi (serialdagi tartib bo'yicha) obunasiz ham ochiq
+        Set<Long> freeIds = FreeEpisodes.ids(episodes);
         Map<Long, Integer> progressMap = userId != null
                 ? watchProgressService.getProgressMap(userId, parts.stream().map(EpisodePartDto::getEpisodeId).toList())
                 : Map.of();
@@ -114,6 +114,8 @@ public class SeriesService {
                 .likeCount(likeCount)
                 .liked(liked)
                 .viewCount(series.getViewCount())
+                .telegramFreeUrl(series.getTelegramFreeUrl())
+                .telegramFreeCount(series.getTelegramFreeCount())
                 .build();
     }
 
@@ -171,7 +173,7 @@ public class SeriesService {
         }
 
         series.setSortOrder(seriesRepo.findMaxSortOrder() + 1);
-        series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
+        applyTelegramFree(series, seriesDto);
         series.setBunnyCollectionId(bunnyStreamService.extractCollectionId(seriesDto.getBunnyCollectionId()));
         series.setSubscriptionBased(seriesDto.getSubscriptionBased());
 
@@ -187,7 +189,7 @@ public class SeriesService {
             series.setImagePath(seriesDto.getImagePath());
             series.setMonthlyPrice(seriesDto.getMonthlyPrice());
             series.setQuarterlyPrice(seriesDto.getQuarterlyPrice());
-            series.setFreeEpisodesCount(seriesDto.getFreeEpisodesCount());
+            applyTelegramFree(series, seriesDto);
             series.setBunnyCollectionId(bunnyStreamService.extractCollectionId(seriesDto.getBunnyCollectionId()));
             series.setSubscriptionBased(seriesDto.getSubscriptionBased());
             if (seriesDto.getGenreIds() != null) {
@@ -258,6 +260,13 @@ public class SeriesService {
                 .sorted((a, b) -> Long.compare(b.getSubscriberCount(), a.getSubscriberCount()))
                 .toList();
     }
+
+    /** Telegram havolasi bo'sh bo'lsa — Telegram'da bepul qism yo'q, soni ham tozalanadi. */
+    private static void applyTelegramFree(Series series, SeriesDto dto) {
+        String url = dto.getTelegramFreeUrl() == null ? null : dto.getTelegramFreeUrl().trim();
+        boolean hasUrl = url != null && !url.isEmpty();
+        series.setTelegramFreeUrl(hasUrl ? url : null);
+        Integer count = dto.getTelegramFreeCount();
+        series.setTelegramFreeCount(hasUrl && count != null && count > 0 ? count : null);
+    }
 }
-
-
