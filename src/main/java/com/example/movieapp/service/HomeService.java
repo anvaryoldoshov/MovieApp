@@ -54,7 +54,7 @@ public class HomeService {
                     .forEach(accessIds::add);
         }
 
-        List<SeriesDto> seriesList = seriesRepo.findAll().stream()
+        List<SeriesDto> seriesList = seriesRepo.findAllByOrderBySortOrderAscIdAsc().stream()
                 .filter(series -> SeriesService.VISIBLE_STATUSES.contains(series.getStatus()) || accessIds.contains(series.getId()))
                 .map(series -> {
                     SeriesDto dto = seriesMapper.toDto(series);
