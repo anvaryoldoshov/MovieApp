@@ -55,6 +55,7 @@ public class SeriesService {
     private final SeasonRepo seasonRepo;
     private final BunnyStreamService bunnyStreamService;
     private final SeriesLikeRepo seriesLikeRepo;
+    private final CommentService commentService;
     private final UserRepo userRepo;
     private final WatchProgressService watchProgressService;
 
@@ -116,6 +117,7 @@ public class SeriesService {
                 .viewCount(series.getViewCount())
                 .telegramFreeUrl(series.getTelegramFreeUrl())
                 .telegramFreeCount(series.getTelegramFreeCount())
+                .commentCount(commentService.count(seriesId))
                 .build();
     }
 
@@ -232,6 +234,7 @@ public class SeriesService {
         }
         movieAccessRepository.deleteByMovie_Id(seriesId);
         bannerRepo.deleteBySeriesId(seriesId);
+        commentService.deleteBySeries(seriesId);
         paymentRepository.detachSeries(seriesId);
         // Epizodlar avval o'chirilishi kerak, chunki ular fasllarga bog'langan (FK)
         episodeRepo.deleteAll(episodeRepo.findBySeriesId(seriesId));

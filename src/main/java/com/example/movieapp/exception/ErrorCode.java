@@ -48,6 +48,11 @@ public enum ErrorCode {
     // Subscription (12000-12099)
     SUBSCRIPTION_PLAN_NOT_FOUND(12001, "Obuna tarifi topilmadi"),
 
+    // Comment (13000-13099)
+    COMMENT_NOT_FOUND(13001, "Izoh topilmadi"),
+    COMMENT_INVALID(13002, "Izoh bo'sh yoki juda uzun (1000 belgigacha)"),
+    COMMENT_TOO_FREQUENT(13003, "Juda tez yozyapsiz, birozdan so'ng qayta urinib ko'ring"),
+
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
 

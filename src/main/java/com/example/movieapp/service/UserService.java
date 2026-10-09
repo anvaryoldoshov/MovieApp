@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepo userRepo;
+    private final CommentService commentService;
     private final UserMapper userMapper;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserDeviceRepository userDeviceRepository;
@@ -96,6 +97,7 @@ public class UserService {
         userDeviceRepository.deleteByUser(user);
         movieAccessRepository.deleteByUserId(user.getId());
         paymentRepository.deleteByUserId(user.getId());
+        commentService.deleteByUser(user.getId());
         userRepo.delete(user);
     }
 }

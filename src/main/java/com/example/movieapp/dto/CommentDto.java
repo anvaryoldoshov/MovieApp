@@ -1,0 +1,25 @@
+package com.example.movieapp.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CommentDto {
+    private Long id;
+    private Long seriesId;
+    private String seriesTitle; // faqat admin javobida
+    private String authorName;
+    private String authorEmail; // faqat admin javobida
+    private String text;
+    private Instant createdAt;
+    private boolean mine;
+    private boolean hidden;
+    private int reportCount;
+}
