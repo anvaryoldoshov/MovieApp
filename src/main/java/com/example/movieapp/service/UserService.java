@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepo userRepo;
     private final CommentService commentService;
+    private final ReminderService reminderService;
     private final UserMapper userMapper;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserDeviceRepository userDeviceRepository;
@@ -98,6 +99,7 @@ public class UserService {
         movieAccessRepository.deleteByUserId(user.getId());
         paymentRepository.deleteByUserId(user.getId());
         commentService.deleteByUser(user.getId());
+        reminderService.deleteByUser(user.getId());
         userRepo.delete(user);
     }
 }

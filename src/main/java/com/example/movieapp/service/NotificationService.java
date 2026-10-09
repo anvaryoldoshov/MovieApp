@@ -125,6 +125,11 @@ public class NotificationService {
      * (xarid tasdig'i, obuna muddati eslatmasi va h.k.).
      */
     public boolean sendToToken(String token, String type, String title, String body, String imageUrl) {
+        return sendToToken(token, type, title, body, imageUrl, null);
+    }
+
+    public boolean sendToToken(String token, String type, String title, String body, String imageUrl,
+                               Map<String, String> extraData) {
         if (FirebaseApp.getApps().isEmpty()) {
             log.warn("Firebase sozlanmagan, push-notification yuborilmadi");
             return false;
@@ -135,7 +140,7 @@ public class NotificationService {
                 .setNotification(buildNotification(title, body, imageUrl))
                 .setAndroidConfig(buildAndroidConfig(DEFAULT_SOUND))
                 .setApnsConfig(buildApnsConfig(DEFAULT_SOUND))
-                .putAllData(buildData(type, title, body, DEFAULT_SOUND, null))
+                .putAllData(buildData(type, title, body, DEFAULT_SOUND, extraData))
                 .build();
 
         try {

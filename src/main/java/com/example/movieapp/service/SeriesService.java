@@ -56,6 +56,7 @@ public class SeriesService {
     private final BunnyStreamService bunnyStreamService;
     private final SeriesLikeRepo seriesLikeRepo;
     private final CommentService commentService;
+    private final ReminderService reminderService;
     private final UserRepo userRepo;
     private final WatchProgressService watchProgressService;
 
@@ -118,6 +119,7 @@ public class SeriesService {
                 .telegramFreeUrl(series.getTelegramFreeUrl())
                 .telegramFreeCount(series.getTelegramFreeCount())
                 .commentCount(commentService.count(seriesId))
+                .reminded(reminderService.isReminded(seriesId, userId))
                 .build();
     }
 
@@ -186,6 +188,7 @@ public class SeriesService {
 
     public ResponseEntity<SeriesDto> updateSeries(Long seriesId, SeriesDto seriesDto) {
         return seriesRepo.findById(seriesId).map(series -> {
+            String previousStatus = series.getStatus();
             series.setTitle(seriesDto.getTitle());
             series.setStatus(seriesDto.getStatus());
             series.setImagePath(seriesDto.getImagePath());
@@ -198,6 +201,7 @@ public class SeriesService {
                 series.setGenres(genreRepo.findAllById(seriesDto.getGenreIds()));
             }
             Series updated = seriesRepo.save(series);
+            reminderService.notifyIfReleased(updated, previousStatus);
 
             SeriesDto dto = seriesMapper.toDto(updated);
             dto.setHasEpisode(episodeRepo.existsBySeriesId(updated.getId()));
@@ -235,6 +239,7 @@ public class SeriesService {
         movieAccessRepository.deleteByMovie_Id(seriesId);
         bannerRepo.deleteBySeriesId(seriesId);
         commentService.deleteBySeries(seriesId);
+        reminderService.deleteBySeries(seriesId);
         paymentRepository.detachSeries(seriesId);
         // Epizodlar avval o'chirilishi kerak, chunki ular fasllarga bog'langan (FK)
         episodeRepo.deleteAll(episodeRepo.findBySeriesId(seriesId));

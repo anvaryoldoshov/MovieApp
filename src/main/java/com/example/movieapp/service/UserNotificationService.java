@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -36,12 +37,17 @@ public class UserNotificationService {
      * ichidan chaqirilishi mumkin va push xatosi ularni buzmasligi kerak.
      */
     public void notifyUser(User user, String type, String title, String body, String imageUrl) {
+        notifyUser(user, type, title, body, imageUrl, null);
+    }
+
+    public void notifyUser(User user, String type, String title, String body, String imageUrl, Long seriesId) {
         UserNotification notification = UserNotification.builder()
                 .user(user)
                 .type(type)
                 .title(title)
                 .body(body)
                 .imageUrl(imageUrl)
+                .seriesId(seriesId)
                 .read(false)
                 .build();
         userNotificationRepository.save(notification);
@@ -50,7 +56,8 @@ public class UserNotificationService {
             userDeviceRepository.findByUserId(user.getId())
                     .map(UserDevice::getFcmToken)
                     .filter(token -> token != null && !token.isBlank())
-                    .ifPresent(token -> notificationService.sendToToken(token, type, title, body, imageUrl));
+                    .ifPresent(token -> notificationService.sendToToken(token, type, title, body, imageUrl,
+                            seriesId == null ? null : Map.of("seriesId", seriesId.toString())));
         } catch (Exception e) {
             log.error("Foydalanuvchi {} ga push yuborishda xatolik: {}", user.getId(), e.getMessage());
         }

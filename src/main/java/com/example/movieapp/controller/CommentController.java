@@ -7,11 +7,14 @@ import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.CommentService;
+import com.example.movieapp.service.ReminderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class CommentController {
 
     private final CommentService commentService;
     private final UserRepo userRepo;
+    private final ReminderService reminderService;
 
     private User currentUser(Authentication authentication) {
         return userRepo.findByEmail(authentication.getName()).orElseThrow(UserNotFoundException::new);
@@ -43,6 +47,11 @@ public class CommentController {
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
         commentService.delete(id, currentUser(authentication));
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/series/{seriesId}/remind")
+    public ResponseEntity<Map<String, Boolean>> toggleReminder(@PathVariable Long seriesId, Authentication authentication) {
+        return ResponseEntity.ok(Map.of("reminded", reminderService.toggle(seriesId, currentUser(authentication))));
     }
 
     @PostMapping("/comments/{id}/report")

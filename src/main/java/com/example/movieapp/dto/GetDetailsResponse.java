@@ -22,5 +22,6 @@ public class GetDetailsResponse {
     private String telegramFreeUrl;   // Telegram'dagi bepul qismlar kanali (bo'sh = yo'q)
     private Integer telegramFreeCount;
     private long commentCount;
+    private boolean reminded;
 }
 
