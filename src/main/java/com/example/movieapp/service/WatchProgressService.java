@@ -53,6 +53,7 @@ public class WatchProgressService {
 
     public List<ContinueWatchingDto> getContinueWatching(Long userId, int limit) {
         return watchProgressRepo.findByUser_IdOrderByUpdatedAtDesc(userId, PageRequest.of(0, limit)).stream()
+                .filter(p -> !ReminderService.COMING_SOON.equals(p.getEpisode().getSeries().getStatus()))
                 .map(this::toContinueWatchingDto)
                 .toList();
     }

@@ -5,6 +5,7 @@ import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.dto.SeriesStatDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
+import com.example.movieapp.exception.NoAccessToSeriesException;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.repository.UserRepo;
@@ -50,6 +51,9 @@ public class SeriesController {
         User user = userRepo.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);
 
+        if (seriesService.isComingSoonLocked(serialId, authentication)) {
+            throw new NoAccessToSeriesException();
+        }
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
         EpisodeDto episode = episodeService.getEpisodeById(serialId, episodeId);
@@ -67,7 +71,11 @@ public class SeriesController {
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        return ResponseEntity.ok(seriesService.getDetails(serialId, canWatch, user.getId()));
+        var details = seriesService.getDetails(serialId, canWatch, user.getId());
+        if (seriesService.isComingSoonLocked(serialId, authentication)) {
+            details.setParts(List.of());
+        }
+        return ResponseEntity.ok(details);
     }
 
     // Mobil ilova "Sevimlilar" sahifasi: foydalanuvchi like bosgan seriallar.

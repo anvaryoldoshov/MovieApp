@@ -7,6 +7,7 @@ import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.EpisodeService;
+import com.example.movieapp.service.SeriesService;
 import com.example.movieapp.service.MovieAccessService;
 import com.example.movieapp.service.WatchProgressService;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ public class EpisodeController {
     private final UserRepo userRepo;
     private final MovieAccessService movieAccessService;
     private final WatchProgressService watchProgressService;
+    private final SeriesService seriesService;
 
     @GetMapping("/{seriesId}/episodes")
     public ResponseEntity<List<EpisodeDto>> getEpisodesBySeries(
@@ -40,6 +42,9 @@ public class EpisodeController {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);
+        if (seriesService.isComingSoonLocked(seriesId, authentication)) {
+            return ResponseEntity.ok(List.of());
+        }
         boolean hasAccess = movieAccessService.canUserWatchMovie(user.getId(), seriesId);
         List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId);
         episodes.forEach(ep -> episodeService.finalizeVideoUrlForAccess(ep, hasAccess));

@@ -27,6 +27,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -142,6 +143,15 @@ public class SeriesService {
      * Foydalanuvchi serialga like bosadi/olib tashlaydi (toggle).
      */
     @Transactional
+    // "Tez kunda" serialning qismlari efirga chiqquncha oddiy foydalanuvchilarga berilmaydi (admin ko'ra oladi).
+    public boolean isComingSoonLocked(Long seriesId, Authentication authentication) {
+        boolean admin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return !admin && seriesRepo.findById(seriesId)
+                .map(s -> ReminderService.COMING_SOON.equals(s.getStatus()))
+                .orElse(false);
+    }
+
     public SeriesLikeResponse toggleLike(Long seriesId, Long userId) {
         Series series = seriesRepo.findById(seriesId).orElseThrow(SeriesNotFoundException::new);
         User user = userRepo.findById(userId).orElseThrow(UserNotFoundException::new);
