@@ -52,4 +52,9 @@ public interface MovieAccessRepository extends JpaRepository<MovieAccess, Long> 
             "GROUP BY m.movie.id")
     List<Object[]> countActiveSubscribersGroupedBySeries();
 
+    @Query("SELECT COUNT(DISTINCT m.user.id) FROM MovieAccess m " +
+            "WHERE m.movie.id = :seriesId AND m.paid = true " +
+            "AND (m.accessEndDate IS NULL OR m.accessEndDate >= CURRENT_DATE)")
+    long countActiveSubscribersBySeries(@Param("seriesId") Long seriesId);
+
 }

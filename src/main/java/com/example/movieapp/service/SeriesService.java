@@ -3,6 +3,7 @@ package com.example.movieapp.service;
 import com.example.movieapp.dto.GetDetailsResponse;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.dto.SeriesLikeResponse;
+import com.example.movieapp.dto.SeriesMonthlyStatDto;
 import com.example.movieapp.dto.SeriesStatDto;
 import com.example.movieapp.entities.Episode;
 import com.example.movieapp.entities.Series;
@@ -280,6 +281,28 @@ public class SeriesService {
                 ))
                 .sorted((a, b) -> Long.compare(b.getSubscriberCount(), a.getSubscriberCount()))
                 .toList();
+    }
+
+    /** Bitta serial bo'yicha oyma-oy sotuvlar: summa sotib olingan paytdagi narx bo'yicha hisoblanadi. */
+    public SeriesMonthlyStatDto getSeriesMonthlyStatistics(Long seriesId) {
+        Series series = seriesRepo.findById(seriesId).orElseThrow(SeriesNotFoundException::new);
+        List<SeriesMonthlyStatDto.Month> months = paymentRepository.monthlyStatsBySeries(seriesId).stream()
+                .map(row -> new SeriesMonthlyStatDto.Month(
+                        (String) row[0],
+                        ((Number) row[1]).longValue(),
+                        ((Number) row[2]).longValue(),
+                        ((Number) row[3]).longValue(),
+                        ((Number) row[4]).longValue()))
+                .toList();
+        return new SeriesMonthlyStatDto(
+                series.getId(),
+                series.getTitle(),
+                series.getImagePath(),
+                movieAccessRepository.countActiveSubscribersBySeries(seriesId),
+                months.stream().mapToLong(SeriesMonthlyStatDto.Month::getPurchases).sum(),
+                months.stream().mapToLong(SeriesMonthlyStatDto.Month::getAmount).sum(),
+                months.stream().mapToLong(SeriesMonthlyStatDto.Month::getPaidAmount).sum(),
+                months);
     }
 
     /** Telegram havolasi bo'sh bo'lsa — Telegram'da bepul qism yo'q, soni ham tozalanadi. */

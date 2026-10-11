@@ -2,6 +2,7 @@ package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
 import com.example.movieapp.dto.SeriesDto;
+import com.example.movieapp.dto.SeriesMonthlyStatDto;
 import com.example.movieapp.dto.SeriesStatDto;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
@@ -173,6 +174,12 @@ public class SeriesController {
     @GetMapping("/statistics")
     public ResponseEntity<List<SeriesStatDto>> getStatistics() {
         return ResponseEntity.ok(seriesService.getSeriesStatistics());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/statistics/{seriesId}")
+    public ResponseEntity<SeriesMonthlyStatDto> getSeriesStatistics(@PathVariable Long seriesId) {
+        return ResponseEntity.ok(seriesService.getSeriesMonthlyStatistics(seriesId));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
