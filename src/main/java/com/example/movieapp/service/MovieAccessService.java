@@ -7,6 +7,8 @@ import com.example.movieapp.enums.PaymentProvider;
 import com.example.movieapp.enums.PaymentStatus;
 import com.example.movieapp.enums.PaymentType;
 import com.example.movieapp.repository.PaymentRepository;
+import com.example.movieapp.repository.SubscriptionPlanRepo;
+import com.example.movieapp.entities.SubscriptionPlan;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.repository.MovieAccessRepository;
@@ -39,6 +41,7 @@ public class MovieAccessService {
     private final SeriesRepo seriesRepo;
     private final UserNotificationService userNotificationService;
     private final PaymentRepository paymentRepository;
+    private final SubscriptionPlanRepo subscriptionPlanRepo;
 
     public MovieAccess giveAccess(Long userId, Long seriesId, boolean paid) {
         User user = userRepo.findById(userId)
@@ -245,9 +248,17 @@ public class MovieAccessService {
                 user.getId(), series.getId(), days, amount, adminEmail);
     }
 
-    private static long defaultPrice(Series series, int days) {
-        if (days >= 90 && series.getQuarterlyPrice() != null) return series.getQuarterlyPrice();
-        return series.getMonthlyPrice() != null ? series.getMonthlyPrice() : 0;
+    /** Obunaga asoslangan serialda narx faol obuna tarifidan, aks holda serialning o'z narxidan olinadi. */
+    private long defaultPrice(Series series, int days) {
+        Long monthly = series.getMonthlyPrice();
+        Long quarterly = series.getQuarterlyPrice();
+        if (Boolean.TRUE.equals(series.getSubscriptionBased())) {
+            SubscriptionPlan plan = subscriptionPlanRepo.findByActiveTrue().stream().findFirst().orElse(null);
+            monthly = plan != null ? plan.getMonthlyPrice() : null;
+            quarterly = plan != null ? plan.getQuarterlyPrice() : null;
+        }
+        if (days >= 90 && quarterly != null) return quarterly;
+        return monthly != null ? monthly : 0;
     }
 
     /** Kirish o'chirilganda (masalan, adashib yoqilgan bo'lsa) muddati hali tugamagan qo'lda to'lovlar bekor qilinadi va statistikadan chiqadi. */
