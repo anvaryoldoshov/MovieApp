@@ -2,6 +2,11 @@ package com.example.movieapp.service;
 
 import com.example.movieapp.dto.MySubscriptionDto;
 import com.example.movieapp.entities.MovieAccess;
+import com.example.movieapp.entities.Payment;
+import com.example.movieapp.enums.PaymentProvider;
+import com.example.movieapp.enums.PaymentStatus;
+import com.example.movieapp.enums.PaymentType;
+import com.example.movieapp.repository.PaymentRepository;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.repository.MovieAccessRepository;
@@ -18,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +38,7 @@ public class MovieAccessService {
     private final UserRepo userRepo;
     private final SeriesRepo seriesRepo;
     private final UserNotificationService userNotificationService;
+    private final PaymentRepository paymentRepository;
 
     public MovieAccess giveAccess(Long userId, Long seriesId, boolean paid) {
         User user = userRepo.findById(userId)
@@ -111,6 +118,7 @@ public class MovieAccessService {
         }
 
         log.debug("Movie access deleted: User {} for Movie {}", accessOpt.get().getUser().getUsername(), accessOpt.get().getMovie().getTitle());
+        cancelActiveManualPayments(userId, movieId);
         movieAccessRepository.delete(accessOpt.get());
         return ResponseEntity.ok("Movie access deleted for userId=" + userId + ", movieId=" + movieId);
     }
@@ -130,7 +138,9 @@ public class MovieAccessService {
             Long userId,
             Map<Long, Integer> seriesAccessMap,
             boolean hasSubscription,
-            Integer subscriptionDays
+            Integer subscriptionDays,
+            Map<Long, Long> manualPayments,
+            String adminEmail
     ) {
         User user = userRepo.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
@@ -198,12 +208,17 @@ public class MovieAccessService {
 
                 movieAccessRepository.save(access);
                 log.debug("Individual access updated for series {}. End Date: {}", series.getTitle(), newEndDate);
+
+                if (manualPayments.containsKey(seriesId)) {
+                    recordManualPayment(user, series, days, manualPayments.get(seriesId), adminEmail);
+                }
             }
 
             // B. O'chirish
             existingPaidAccesses.stream()
                     .filter(ma -> !updatedSeriesIds.contains(ma.getMovie().getId()))
                     .forEach(access -> {
+                        cancelActiveManualPayments(userId, access.getMovie().getId());
                         movieAccessRepository.delete(access);
                         log.debug("Deleted expired/unselected individual access for series {}", access.getMovie().getTitle());
                     });
@@ -212,6 +227,43 @@ public class MovieAccessService {
         userRepo.save(user); // Obuna o'rnatilsa ham, o'chirilmasa ham User obyekti saqlanadi
     }
 
+
+    /** Admin "to'lov qildi" deb belgilaganda statistikaga tushadigan qo'lda to'lov yoziladi (summa so'mda, komissiyasiz). */
+    private void recordManualPayment(User user, Series series, int days, Long amountSom, String adminEmail) {
+        long amount = amountSom != null && amountSom > 0 ? amountSom : defaultPrice(series, days);
+        paymentRepository.save(Payment.builder()
+                .user(user)
+                .series(series)
+                .amount(amount * 100)
+                .status(PaymentStatus.PAID)
+                .provider(PaymentProvider.MANUAL)
+                .paymentType(PaymentType.INDIVIDUAL_SERIES)
+                .subscriptionDays(days)
+                .createdBy(adminEmail)
+                .build());
+        log.info("Qo'lda to'lov yozildi: user={}, series={}, kunlar={}, summa={} so'm, admin={}",
+                user.getId(), series.getId(), days, amount, adminEmail);
+    }
+
+    private static long defaultPrice(Series series, int days) {
+        if (days >= 90 && series.getQuarterlyPrice() != null) return series.getQuarterlyPrice();
+        return series.getMonthlyPrice() != null ? series.getMonthlyPrice() : 0;
+    }
+
+    /** Kirish o'chirilganda (masalan, adashib yoqilgan bo'lsa) muddati hali tugamagan qo'lda to'lovlar bekor qilinadi va statistikadan chiqadi. */
+    private void cancelActiveManualPayments(Long userId, Long seriesId) {
+        LocalDateTime now = LocalDateTime.now();
+        List<Payment> active = paymentRepository
+                .findByUser_IdAndSeries_IdAndProviderAndStatus(userId, seriesId, PaymentProvider.MANUAL, PaymentStatus.PAID)
+                .stream()
+                .filter(p -> p.getCreatedAt() == null || p.getSubscriptionDays() == null
+                        || p.getCreatedAt().plusDays(p.getSubscriptionDays()).isAfter(now))
+                .toList();
+        if (active.isEmpty()) return;
+        active.forEach(p -> p.setStatus(PaymentStatus.CANCELLED));
+        paymentRepository.saveAll(active);
+        log.info("Qo'lda to'lovlar bekor qilindi: user={}, series={}, soni={}", userId, seriesId, active.size());
+    }
 
     @Transactional
     public void grantPaidAccess(Long userId, Long seriesId, int accessDays) {

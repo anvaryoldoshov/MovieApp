@@ -292,7 +292,9 @@ public class SeriesService {
                         ((Number) row[1]).longValue(),
                         ((Number) row[2]).longValue(),
                         ((Number) row[3]).longValue(),
-                        ((Number) row[4]).longValue()))
+                        ((Number) row[4]).longValue(),
+                        ((Number) row[5]).longValue(),
+                        ((Number) row[6]).longValue()))
                 .toList();
         return new SeriesMonthlyStatDto(
                 series.getId(),
@@ -302,6 +304,7 @@ public class SeriesService {
                 months.stream().mapToLong(SeriesMonthlyStatDto.Month::getPurchases).sum(),
                 months.stream().mapToLong(SeriesMonthlyStatDto.Month::getAmount).sum(),
                 months.stream().mapToLong(SeriesMonthlyStatDto.Month::getPaidAmount).sum(),
+                months.stream().mapToLong(SeriesMonthlyStatDto.Month::getManualAmount).sum(),
                 months);
     }
 

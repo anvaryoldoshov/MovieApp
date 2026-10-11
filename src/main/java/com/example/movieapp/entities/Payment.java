@@ -52,6 +52,9 @@ public class Payment {
 
     private Integer subscriptionDays;
 
+    /** Qo'lda (MANUAL) to'lovni kiritgan admin email'i. */
+    private String createdBy;
+
     // Pixy fields
     private String pixyHash;
     private String pixyOrderId;

@@ -10,4 +10,6 @@ public class UserAccessUpdateRequest {
 
     private Boolean subscription;
     private Integer subscriptionDays;
+    /** Admin "to'lov qildi" deb belgilagan seriallar: seriesId -> summa (so'mda); summa bo'sh bo'lsa serial narxi olinadi. */
+    private Map<Long, Long> manualPayments;
 }

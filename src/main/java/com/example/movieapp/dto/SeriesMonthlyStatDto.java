@@ -18,9 +18,10 @@ public class SeriesMonthlyStatDto {
     private long totalPurchases;
     private long totalAmount;
     private long totalPaidAmount;
+    private long totalManualAmount;
     private List<Month> months;
 
-    /** amount — tarif narxi bo'yicha (komissiyasiz), paidAmount — foydalanuvchi to'lagan summa (4% komissiya bilan), so'mda. */
+    /** amount — tarif narxi bo'yicha (komissiyasiz), paidAmount — foydalanuvchi to'lagan summa (Pixy'da 4% komissiya bilan), manual* — admin qo'lda kiritgan to'lovlar; hammasi so'mda. */
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -30,5 +31,7 @@ public class SeriesMonthlyStatDto {
         private long buyers;
         private long amount;
         private long paidAmount;
+        private long manualPurchases;
+        private long manualAmount;
     }
 }

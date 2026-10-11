@@ -8,6 +8,7 @@ import com.example.movieapp.service.MovieAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -54,7 +55,8 @@ public class MovieAccessController {
     @PutMapping("/user/{userId}")
     public ResponseEntity<?> updateUserAccess(
             @PathVariable Long userId,
-            @RequestBody UserAccessUpdateRequest request
+            @RequestBody UserAccessUpdateRequest request,
+            Authentication authentication
     ) {
 
         Map<Long, Integer> seriesAccessMap = request.getSeriesAccessMap() != null
@@ -71,7 +73,9 @@ public class MovieAccessController {
                 userId,
                 seriesAccessMap,
                 hasSubscription != null ? hasSubscription : false,
-                subscriptionDays
+                subscriptionDays,
+                request.getManualPayments() != null ? request.getManualPayments() : Map.of(),
+                authentication != null ? authentication.getName() : null
         );
 
         return ResponseEntity.ok("User access updated successfully");

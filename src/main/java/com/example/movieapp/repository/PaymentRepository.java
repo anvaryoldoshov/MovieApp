@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.movieapp.entities.Payment;
+import com.example.movieapp.enums.PaymentProvider;
+import com.example.movieapp.enums.PaymentStatus;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByPixyHash(String pixyHash);
@@ -19,8 +21,14 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     void deleteByUserId(Long userId);
 
+    List<Payment> findByUser_IdAndSeries_IdAndProviderAndStatus(Long userId, Long seriesId,
+                                                                 PaymentProvider provider, PaymentStatus status);
+
     @Query(value = "SELECT to_char(created_at, 'YYYY-MM') AS month, COUNT(*), COUNT(DISTINCT user_id), " +
-            "COALESCE(SUM(ROUND(amount / 104.0)), 0), COALESCE(SUM(amount / 100), 0) " +
+            "COALESCE(SUM(CASE WHEN provider = 'MANUAL' THEN amount / 100 ELSE ROUND(amount / 104.0) END), 0), " +
+            "COALESCE(SUM(amount / 100), 0), " +
+            "COUNT(*) FILTER (WHERE provider = 'MANUAL'), " +
+            "COALESCE(SUM(amount / 100) FILTER (WHERE provider = 'MANUAL'), 0) " +
             "FROM payments WHERE series_id = :seriesId AND status = 'PAID' " +
             "GROUP BY month ORDER BY month DESC", nativeQuery = true)
     List<Object[]> monthlyStatsBySeries(@Param("seriesId") Long seriesId);
