@@ -23,6 +23,7 @@ import com.example.movieapp.repository.SeasonRepo;
 import com.example.movieapp.repository.SeriesLikeRepo;
 import com.example.movieapp.repository.SeriesRepo;
 import com.example.movieapp.repository.UserRepo;
+import com.example.movieapp.repository.WatchProgressRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -60,6 +61,7 @@ public class SeriesService {
     private final ReminderService reminderService;
     private final UserRepo userRepo;
     private final WatchProgressService watchProgressService;
+    private final WatchProgressRepo watchProgressRepo;
 
     @Transactional
     public Series createOrFetch(SeriesDto dto) {
@@ -251,6 +253,7 @@ public class SeriesService {
         commentService.deleteBySeries(seriesId);
         reminderService.deleteBySeries(seriesId);
         paymentRepository.detachSeries(seriesId);
+        watchProgressRepo.deleteBySeriesId(seriesId);
         // Epizodlar avval o'chirilishi kerak, chunki ular fasllarga bog'langan (FK)
         episodeRepo.deleteAll(episodeRepo.findBySeriesId(seriesId));
         seasonRepo.deleteBySeries_Id(seriesId);

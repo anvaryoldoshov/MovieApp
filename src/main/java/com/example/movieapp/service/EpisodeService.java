@@ -8,6 +8,7 @@ import com.example.movieapp.mapper.EpisodeMapper;
 import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeasonRepo;
 import com.example.movieapp.repository.SeriesRepo;
+import com.example.movieapp.repository.WatchProgressRepo;
 import com.example.movieapp.exception.EpisodeNotBelongToSeriesException;
 import com.example.movieapp.exception.SeasonNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 public class EpisodeService {
 
     private final EpisodeRepo episodeRepo;
+    private final WatchProgressRepo watchProgressRepo;
     private final EpisodeMapper episodeMapper;
     private final SeriesRepo seriesRepo;
     private final SeasonRepo seasonRepo;
@@ -233,9 +236,11 @@ public class EpisodeService {
     }
 
 
+    @Transactional
     public ResponseEntity<Map<String, String>> deleteEpisode(Long episodeId) {
         return episodeRepo.findById(episodeId)
                 .map(ep -> {
+                    watchProgressRepo.deleteByEpisodeId(ep.getId());
                     episodeRepo.delete(ep);
                     return ResponseEntity.ok(Map.of("message", "Episode deleted"));
                 }).orElse(ResponseEntity.notFound().build());
