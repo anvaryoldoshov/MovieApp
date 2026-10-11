@@ -1,5 +1,6 @@
 package com.example.movieapp.controller;
 
+import com.example.movieapp.enums.Role;
 import com.example.movieapp.dto.AuthResponse;
 import com.example.movieapp.dto.GoogleLoginRequest;
 import com.example.movieapp.dto.LogoutRequest;
@@ -49,7 +50,8 @@ public class AuthController {
 
             Optional<UserDevice> userDeviceOpt = userDeviceRepository.findByUserId(user.getId());
 
-            if (userDeviceOpt.isEmpty() || !Objects.equals(userDeviceOpt.get().getDeviceId(), deviceId)) {
+            boolean admin = user.getRole() == Role.ADMIN;
+            if (!admin && (userDeviceOpt.isEmpty() || !Objects.equals(userDeviceOpt.get().getDeviceId(), deviceId))) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body("Ushbu qurilma ushbu akkaunt bilan bog'liq emas");
             }
@@ -57,10 +59,12 @@ public class AuthController {
             String newAccessToken = jwtTokenProvider.generateAccessToken(email, user.getRole());
             String newRefreshToken = refreshTokenService.createRefreshToken(email).getToken();
 
-            UserDevice device = userDeviceOpt.get();
-            device.setToken(newAccessToken);
-            device.setCreatedAt(Instant.now());
-            userDeviceRepository.save(device);
+            if (!admin) {
+                UserDevice device = userDeviceOpt.get();
+                device.setToken(newAccessToken);
+                device.setCreatedAt(Instant.now());
+                userDeviceRepository.save(device);
+            }
 
             AuthResponse response = new AuthResponse();
             response.setToken(newAccessToken);

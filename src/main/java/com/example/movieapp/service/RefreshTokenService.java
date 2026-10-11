@@ -11,7 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.example.movieapp.enums.Role;
+
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -27,6 +31,15 @@ public class RefreshTokenService {
     @Transactional
     public RefreshToken createRefreshToken(String email) {
         User user = userRepo.findByEmail(email).orElseThrow();
+
+        // Admin: barcha qurilmalar bitta refresh token'dan foydalanadi, shuning uchun yangi kirish yoki
+        // token yangilash boshqa ochiq admin sessiyalarini chiqarib yubormaydi.
+        if (user.getRole() == Role.ADMIN) {
+            Optional<RefreshToken> existing = refreshTokenRepository.findByUser(user);
+            if (existing.isPresent() && existing.get().getExpiryDate().isAfter(Instant.now().plus(Duration.ofDays(1)))) {
+                return existing.get();
+            }
+        }
 
         refreshTokenRepository.deleteByUser(user);
 

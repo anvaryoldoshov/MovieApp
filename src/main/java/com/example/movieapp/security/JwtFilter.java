@@ -2,6 +2,7 @@ package com.example.movieapp.security;
 
 import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
+import com.example.movieapp.enums.Role;
 import com.example.movieapp.repository.UserDeviceRepository;
 import com.example.movieapp.repository.UserRepo;
 import jakarta.servlet.FilterChain;
@@ -61,21 +62,25 @@ public class JwtFilter extends OncePerRequestFilter {
                 User user = userRepo.findByEmail(email)
                         .orElseThrow(() -> new AuthenticationServiceException("Foydalanuvchi topilmadi"));
 
-                UserDevice device = userDeviceRepository.findByUserAndDeviceId(user, deviceId)
-                        .orElseThrow(() -> new AuthenticationServiceException("Ushbu foydalanuvchiga device biriktirilmagan"));
-
-                if (!device.getToken().equals(token)) {
-                    logger.error("Token mos emas, email={}, deviceId={}", email, deviceId);
-                    throw new AuthenticationServiceException("Token mos emas");
-                }
-
-                if (device.getDeviceId() == null || !device.getDeviceId().equals(deviceId)) {
-                    logger.info(deviceId);
-                    logger.error("Device ID mos emas yoki yo‘q, {}",  device.getDeviceId());
-                    throw new AuthenticationServiceException("Device ID mos emas yoki yo‘q");
-                }
-
                 String role = jwtTokenProvider.getRoleFromToken(token);
+
+                // Admin bir nechta qurilma/brauzerdan bir vaqtda ishlay oladi; "bitta qurilma" cheklovi faqat oddiy foydalanuvchilarga.
+                if (user.getRole() != Role.ADMIN) {
+                    UserDevice device = userDeviceRepository.findByUserAndDeviceId(user, deviceId)
+                            .orElseThrow(() -> new AuthenticationServiceException("Ushbu foydalanuvchiga device biriktirilmagan"));
+
+                    if (!device.getToken().equals(token)) {
+                        logger.error("Token mos emas, email={}, deviceId={}", email, deviceId);
+                        throw new AuthenticationServiceException("Token mos emas");
+                    }
+
+                    if (device.getDeviceId() == null || !device.getDeviceId().equals(deviceId)) {
+                        logger.info(deviceId);
+                        logger.error("Device ID mos emas yoki yo‘q, {}",  device.getDeviceId());
+                        throw new AuthenticationServiceException("Device ID mos emas yoki yo‘q");
+                    }
+                }
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(email, null,
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role)));
