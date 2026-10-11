@@ -258,7 +258,7 @@ public class MovieAccessService {
             quarterly = plan != null ? plan.getQuarterlyPrice() : null;
         }
         if (days >= 90 && quarterly != null) return quarterly;
-        return monthly != null ? monthly : 0;
+        return monthly != null ? monthly * Math.max(1, (days + 29) / 30) : 0;
     }
 
     /** Kirish o'chirilganda (masalan, adashib yoqilgan bo'lsa) muddati hali tugamagan qo'lda to'lovlar bekor qilinadi va statistikadan chiqadi. */
