@@ -255,6 +255,7 @@ public class SeriesService {
         reminderService.deleteBySeries(seriesId);
         paymentRepository.detachSeries(seriesId);
         watchProgressRepo.deleteBySeriesId(seriesId);
+        seriesLikeRepo.deleteBySeriesId(seriesId);
         // Epizodlar avval o'chirilishi kerak, chunki ular fasllarga bog'langan (FK)
         episodeRepo.deleteAll(episodeRepo.findBySeriesId(seriesId));
         seasonRepo.deleteBySeries_Id(seriesId);
