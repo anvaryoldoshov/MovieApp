@@ -14,8 +14,10 @@ import com.example.movieapp.repository.SeriesRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -30,7 +32,7 @@ public class BannerService {
     private final BannerMapper bannerMapper;
 
     public List<BannerResponseDto> getAllBannersDto() {
-        return bannerRepo.findAll().stream()
+        return bannerRepo.findAllByOrderBySortOrderAscIdAsc().stream()
                 .map(banner -> new BannerResponseDto(
                         banner.getId(),
                         banner.getImage(),
@@ -47,7 +49,9 @@ public class BannerService {
             throw new SeriesNotFoundException();
 
         bannerDto.setMovie(seriesMapper.toDto(byId.get()));
-        bannerRepo.save(bannerMapper.toBanner(bannerDto));
+        Banner banner = bannerMapper.toBanner(bannerDto);
+        banner.setSortOrder(bannerRepo.findMaxSortOrder() + 1);
+        bannerRepo.save(banner);
         return ResponseEntity.ok().build();
     }
 
@@ -71,6 +75,25 @@ public class BannerService {
         if (byId.isEmpty())
             throw new SeriesNotFoundException();
         bannerRepo.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Adminda bannerlarni qo'lda tartiblash. orderedIds ro'yxatidagi ketma-ketlik yangi tartibni belgilaydi.
+     */
+    @Transactional
+    public ResponseEntity<?> reorderBanners(List<Long> orderedIds) {
+        Map<Long, Banner> byId = bannerRepo.findAllById(orderedIds).stream()
+                .collect(Collectors.toMap(Banner::getId, b -> b));
+
+        for (int i = 0; i < orderedIds.size(); i++) {
+            Banner banner = byId.get(orderedIds.get(i));
+            if (banner != null) {
+                banner.setSortOrder(i);
+            }
+        }
+
+        bannerRepo.saveAll(byId.values());
         return ResponseEntity.ok().build();
     }
 

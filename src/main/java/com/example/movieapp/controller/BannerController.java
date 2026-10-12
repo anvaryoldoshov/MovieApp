@@ -53,6 +53,12 @@ public class BannerController {
         }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/reorder")
+    public ResponseEntity<?> reorderBanners(@RequestBody List<Long> orderedIds) {
+        return bannerService.reorderBanners(orderedIds);
+    }
+
     @GetMapping("/all-banners")
     public List<BannerResponseDto> getAllBannersDto() {
         return bannerService.getAllBannersDto();

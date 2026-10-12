@@ -15,6 +15,8 @@ public class Banner {
 
     private String image;
 
+    private Integer sortOrder; // ilovada va adminda ko'rinish tartibi (kichik = birinchi)
+
     @ManyToOne
     @JoinColumn(name = "series_id")
     @JsonBackReference

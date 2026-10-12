@@ -64,7 +64,7 @@ public class HomeService {
                 })
                 .toList();
 
-        List<BannerDto> bannerDtos = bannerRepo.findAll().stream()
+        List<BannerDto> bannerDtos = bannerRepo.findAllByOrderBySortOrderAscIdAsc().stream()
                 .map(banner -> {
                     Series series = banner.getSeries();
                     SeriesDto movie = null;
