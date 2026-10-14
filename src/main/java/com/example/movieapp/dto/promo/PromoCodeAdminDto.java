@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -18,6 +19,11 @@ public class PromoCodeAdminDto {
     private LocalDate validUntil;
     private boolean active;
     private LocalDateTime createdAt;
+    private boolean allSeries;
+    private List<SeriesRef> series;
+
+    public record SeriesRef(Long id, String title) {
+    }
 
     private long usedCount;         // muvaffaqiyatli to'lovlar soni
     private long paidUsers;         // to'lagan odamlar soni

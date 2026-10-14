@@ -124,7 +124,7 @@ public class PaymentService {
         PromoCode promo = null;
         long discountSom = 0;
         if (request.getPromoCode() != null && !request.getPromoCode().isBlank()) {
-            promo = promoCodeService.validateFor(request.getPromoCode(), userId);
+            promo = promoCodeService.validateFor(request.getPromoCode(), userId, series != null ? series.getId() : null);
             discountSom = promoCodeService.discountFor(promo, originalSom);
         }
 

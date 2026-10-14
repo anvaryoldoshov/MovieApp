@@ -7,6 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Data
@@ -41,6 +43,24 @@ public class PromoCode {
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    // Qaysi seriallarga amal qiladi; bo'sh bo'lsa — barcha seriallar va obuna uchun
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "promo_code_series",
+            joinColumns = @JoinColumn(name = "promo_code_id"),
+            inverseJoinColumns = @JoinColumn(name = "series_id"))
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<Series> series = new HashSet<>();
+
+    public boolean appliesToAll() {
+        return series == null || series.isEmpty();
+    }
+
+    public boolean appliesTo(Long seriesId) {
+        return appliesToAll() || (seriesId != null && series.stream().anyMatch(s -> s.getId().equals(seriesId)));
+    }
 
     private String createdBy;
 

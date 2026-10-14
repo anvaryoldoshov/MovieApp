@@ -20,6 +20,7 @@ import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.GenreRepo;
 import com.example.movieapp.repository.MovieAccessRepository;
 import com.example.movieapp.repository.PaymentRepository;
+import com.example.movieapp.repository.PromoCodeRepository;
 import com.example.movieapp.repository.SeasonRepo;
 import com.example.movieapp.repository.SeriesLikeRepo;
 import com.example.movieapp.repository.SeriesRepo;
@@ -54,6 +55,7 @@ public class SeriesService {
     private final BannerRepo bannerRepo;
     private final MovieAccessRepository movieAccessRepository;
     private final PaymentRepository paymentRepository;
+    private final PromoCodeRepository promoCodeRepository;
     private final GenreRepo genreRepo;
     private final SeasonRepo seasonRepo;
     private final BunnyStreamService bunnyStreamService;
@@ -254,6 +256,7 @@ public class SeriesService {
         commentService.deleteBySeries(seriesId);
         reminderService.deleteBySeries(seriesId);
         paymentRepository.detachSeries(seriesId);
+        promoCodeRepository.detachSeries(seriesId);
         watchProgressRepo.deleteBySeriesId(seriesId);
         seriesLikeRepo.deleteBySeriesId(seriesId);
         // Epizodlar avval o'chirilishi kerak, chunki ular fasllarga bog'langan (FK)

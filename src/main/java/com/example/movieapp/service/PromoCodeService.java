@@ -5,20 +5,25 @@ import com.example.movieapp.dto.promo.PromoCodeRequest;
 import com.example.movieapp.dto.promo.PromoUsageDto;
 import com.example.movieapp.entities.Payment;
 import com.example.movieapp.entities.PromoCode;
+import com.example.movieapp.entities.Series;
 import com.example.movieapp.enums.DiscountType;
 import com.example.movieapp.enums.PaymentStatus;
 import com.example.movieapp.exception.ErrorCode;
 import com.example.movieapp.exception.PromoCodeException;
 import com.example.movieapp.repository.PaymentRepository;
 import com.example.movieapp.repository.PromoCodeRepository;
+import com.example.movieapp.repository.SeriesRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,17 +34,22 @@ public class PromoCodeService {
 
     private final PromoCodeRepository promoCodeRepository;
     private final PaymentRepository paymentRepository;
+    private final SeriesRepo seriesRepo;
 
     public static String normalize(String code) {
         return code == null ? "" : code.trim().toUpperCase().replaceAll("\\s+", "");
     }
 
-    /** Foydalanuvchi kiritgan promokodni tekshiradi; yaroqsiz bo'lsa sababi bilan xato beradi */
-    public PromoCode validateFor(String rawCode, Long userId) {
+    /**
+     * Foydalanuvchi kiritgan promokodni tekshiradi; yaroqsiz bo'lsa sababi bilan xato beradi.
+     * seriesId — individual serial xaridi uchun, obuna xaridida null (obunaga faqat "barcha seriallar" promokodi amal qiladi).
+     */
+    public PromoCode validateFor(String rawCode, Long userId, Long seriesId) {
         String code = normalize(rawCode);
         PromoCode promo = promoCodeRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new PromoCodeException(ErrorCode.PROMO_NOT_FOUND));
         if (!promo.isActive()) throw new PromoCodeException(ErrorCode.PROMO_INACTIVE);
+        if (!promo.appliesTo(seriesId)) throw new PromoCodeException(ErrorCode.PROMO_NOT_APPLICABLE);
         if (promo.getValidUntil() != null && LocalDate.now().isAfter(promo.getValidUntil())) {
             throw new PromoCodeException(ErrorCode.PROMO_EXPIRED);
         }
@@ -89,6 +99,7 @@ public class PromoCodeService {
                 .validUntil(request.getValidUntil())
                 .active(request.getActive() == null || request.getActive())
                 .createdBy(adminEmail)
+                .series(resolveSeries(request.getSeriesIds()))
                 .build();
         return toDto(promoCodeRepository.save(promo), null);
     }
@@ -107,6 +118,7 @@ public class PromoCodeService {
         promo.setMaxUses(positiveOrNull(request.getMaxUses()));
         promo.setValidUntil(request.getValidUntil());
         if (request.getActive() != null) promo.setActive(request.getActive());
+        promo.setSeries(resolveSeries(request.getSeriesIds()));
         promoCodeRepository.save(promo);
         return findAll().stream().filter(d -> d.getId().equals(id)).findFirst().orElseThrow();
     }
@@ -138,6 +150,11 @@ public class PromoCodeService {
         return code;
     }
 
+    private Set<Series> resolveSeries(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return new HashSet<>();
+        return new HashSet<>(seriesRepo.findAllById(ids));
+    }
+
     private static Integer positiveOrNull(Integer v) {
         return v == null || v <= 0 ? null : v;
     }
@@ -152,6 +169,11 @@ public class PromoCodeService {
                 .validUntil(p.getValidUntil())
                 .active(p.isActive())
                 .createdAt(p.getCreatedAt())
+                .allSeries(p.appliesToAll())
+                .series(p.getSeries().stream()
+                        .sorted(Comparator.comparing(Series::getId))
+                        .map(sr -> new PromoCodeAdminDto.SeriesRef(sr.getId(), sr.getTitle()))
+                        .toList())
                 .usedCount(s == null ? 0 : ((Number) s[1]).longValue())
                 .paidUsers(s == null ? 0 : ((Number) s[2]).longValue())
                 .totalDiscountInSom(s == null ? 0 : ((Number) s[3]).longValue())

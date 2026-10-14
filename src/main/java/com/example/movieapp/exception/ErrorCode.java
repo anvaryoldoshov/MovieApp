@@ -62,6 +62,7 @@ public enum ErrorCode {
     PROMO_ALREADY_EXISTS(14006, "Bu nomdagi promokod allaqachon mavjud"),
     PROMO_INVALID(14007, "Promokod ma'lumotlari noto'g'ri: nom va chegirma qiymatini tekshiring"),
     PROMO_IN_USE(14008, "Bu promokod bilan to'lovlar qilingan, uni o'chirib bo'lmaydi — nofaol qiling"),
+    PROMO_NOT_APPLICABLE(14009, "Bu promokod ushbu serial uchun amal qilmaydi"),
 
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
