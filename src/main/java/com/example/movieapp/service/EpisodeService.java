@@ -247,7 +247,7 @@ public class EpisodeService {
     }
 
     public List<EpisodeDto> getEpisodesBySeries(Long seriesId) {
-        List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
+        List<Episode> episodes = FreeEpisodes.sorted(episodeRepo.findBySeriesId(seriesId));
         Set<Long> freeIds = FreeEpisodes.ids(episodes);
 
         return episodes.stream()

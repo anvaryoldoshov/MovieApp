@@ -95,7 +95,7 @@ public class SeriesService {
         series.setViewCount((series.getViewCount() == null ? 0L : series.getViewCount()) + 1L);
         seriesRepo.save(series);
 
-        List<Episode> episodes = episodeRepo.findBySeriesId(seriesId);
+        List<Episode> episodes = FreeEpisodes.sorted(episodeRepo.findBySeriesId(seriesId));
         List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
 
         // Har serialning birinchi qismi (serialdagi tartib bo'yicha) obunasiz ham ochiq

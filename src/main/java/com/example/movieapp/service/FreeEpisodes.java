@@ -19,13 +19,18 @@ public final class FreeEpisodes {
     private FreeEpisodes() {
     }
 
-    private static final Comparator<Episode> ORDER = Comparator
+    public static final Comparator<Episode> ORDER = Comparator
             .comparing((Episode e) -> e.getSeason() != null && e.getSeason().getSeasonNumber() != null
                     ? e.getSeason().getSeasonNumber() : 0)
             .thenComparing(e -> e.getEpisodeNumber() != null ? e.getEpisodeNumber() : Integer.MAX_VALUE)
             .thenComparing(Episode::getId, Comparator.nullsLast(Comparator.naturalOrder()));
 
     public static final int FREE_COUNT = 1;
+
+    /** Qismlarni serialdagi tartibda qaytaradi: fasl, keyin qism raqami bo'yicha. */
+    public static List<Episode> sorted(List<Episode> seriesEpisodes) {
+        return seriesEpisodes.stream().sorted(ORDER).toList();
+    }
 
     /** Serialning bepul qismi id'si (bo'sh serialda — bo'sh to'plam). */
     public static Set<Long> ids(List<Episode> seriesEpisodes) {
