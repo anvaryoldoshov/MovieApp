@@ -53,6 +53,16 @@ public enum ErrorCode {
     COMMENT_INVALID(13002, "Izoh bo'sh yoki juda uzun (1000 belgigacha)"),
     COMMENT_TOO_FREQUENT(13003, "Juda tez yozyapsiz, birozdan so'ng qayta urinib ko'ring"),
 
+    // Promo code (14000-14099)
+    PROMO_NOT_FOUND(14001, "Bunday promokod topilmadi"),
+    PROMO_INACTIVE(14002, "Bu promokod hozir faol emas"),
+    PROMO_EXPIRED(14003, "Promokod muddati tugagan"),
+    PROMO_LIMIT_REACHED(14004, "Promokoddan foydalanish soni tugagan"),
+    PROMO_ALREADY_USED(14005, "Siz bu promokoddan allaqachon foydalangansiz"),
+    PROMO_ALREADY_EXISTS(14006, "Bu nomdagi promokod allaqachon mavjud"),
+    PROMO_INVALID(14007, "Promokod ma'lumotlari noto'g'ri: nom va chegirma qiymatini tekshiring"),
+    PROMO_IN_USE(14008, "Bu promokod bilan to'lovlar qilingan, uni o'chirib bo'lmaydi — nofaol qiling"),
+
     // General (9000-9099)
     INTERNAL_ERROR(9001, "Server xatosi yuz berdi");
 

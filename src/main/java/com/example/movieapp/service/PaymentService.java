@@ -3,6 +3,7 @@ package com.example.movieapp.service;
 import com.example.movieapp.dto.payment.CreatePaymentOrderRequest;
 import com.example.movieapp.dto.payment.CreatePaymentOrderResponse;
 import com.example.movieapp.entities.Payment;
+import com.example.movieapp.entities.PromoCode;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.SubscriptionPlan;
 import com.example.movieapp.entities.User;
@@ -34,6 +35,7 @@ public class PaymentService {
     private final MovieAccessService movieAccessService;
     private final PixyService pixyService;
     private final UserNotificationService userNotificationService;
+    private final PromoCodeService promoCodeService;
 
     public PaymentService(PaymentRepository paymentRepository,
                           UserRepo userRepo,
@@ -41,7 +43,8 @@ public class PaymentService {
                           SubscriptionPlanRepo subscriptionPlanRepo,
                           MovieAccessService movieAccessService,
                           @Lazy PixyService pixyService,
-                          UserNotificationService userNotificationService) {
+                          UserNotificationService userNotificationService,
+                          PromoCodeService promoCodeService) {
         this.paymentRepository = paymentRepository;
         this.userRepo = userRepo;
         this.seriesRepo = seriesRepo;
@@ -49,97 +52,103 @@ public class PaymentService {
         this.movieAccessService = movieAccessService;
         this.pixyService = pixyService;
         this.userNotificationService = userNotificationService;
+        this.promoCodeService = promoCodeService;
     }
 
     @Transactional
     public CreatePaymentOrderResponse createOrder(CreatePaymentOrderRequest request, Long userId) {
+        Pricing pricing = price(request, userId);
+
+        Payment payment = Payment.builder()
+                .user(pricing.user())
+                .series(pricing.series())
+                .subscriptionPlan(pricing.plan())
+                .amount(pricing.amountSom() * 100)
+                .status(PaymentStatus.PENDING)
+                .provider(PaymentProvider.PIXY)
+                .paymentType(pricing.plan() != null ? PaymentType.SUBSCRIPTION : PaymentType.INDIVIDUAL_SERIES)
+                .subscriptionDays(pricing.durationMonths() * 30)
+                .promoCode(pricing.promo())
+                .discountAmount(pricing.promo() != null ? pricing.discountSom() : null)
+                .build();
+
+        payment = paymentRepository.save(payment);
+        log.info("{} to'lov order yaratildi: id={}, user={}, {}={}, davomiylik={}oy, amount={} tiyin{}",
+                pricing.plan() != null ? "Obuna" : "Individual",
+                payment.getId(), pricing.user().getId(),
+                pricing.plan() != null ? "plan" : "series",
+                pricing.plan() != null ? pricing.plan().getId() : pricing.series().getId(),
+                pricing.durationMonths(), payment.getAmount(),
+                pricing.promo() != null ? ", promo=" + pricing.promo().getCode() + " (-" + pricing.discountSom() + " so'm)" : "");
+
+        String payUrl = pixyService.createPayment(payment, pricing.amountSom());
+
+        return toResponse(pricing, payment.getId(), payUrl);
+    }
+
+    /** Order yaratmasdan narxni (promokod chegirmasi bilan) hisoblab beradi */
+    @Transactional(readOnly = true)
+    public CreatePaymentOrderResponse quote(CreatePaymentOrderRequest request, Long userId) {
+        return toResponse(price(request, userId), null, null);
+    }
+
+    private record Pricing(User user, Series series, SubscriptionPlan plan, int durationMonths,
+                           long originalSom, PromoCode promo, long discountSom,
+                           long baseSom, long commissionSom, long amountSom) {
+    }
+
+    private Pricing price(CreatePaymentOrderRequest request, Long userId) {
         // Kamida bittasi ko'rsatilishi shart
         if (request.getSeriesId() == null && request.getSubscriptionPlanId() == null) {
             throw new RuntimeException("seriesId yoki subscriptionPlanId ko'rsatilishi kerak");
         }
 
         int durationMonths = resolveDuration(request.getDurationMonths());
-        int accessDays = durationMonths * 30;
 
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User topilmadi: " + userId));
 
+        Series series = null;
+        SubscriptionPlan plan = null;
+        long originalSom;
         if (request.getSubscriptionPlanId() != null) {
-            // ── OBUNA TO'LOVI ──────────────────────────────────────────
-            SubscriptionPlan plan = subscriptionPlanRepo.findById(request.getSubscriptionPlanId())
+            plan = subscriptionPlanRepo.findById(request.getSubscriptionPlanId())
                     .orElseThrow(SubscriptionPlanNotFoundException::new);
-
-            long baseAmountSom = resolveSubscriptionPrice(plan, durationMonths);
-            long commissionSom = baseAmountSom * 4 / 100;
-            long amountSom = baseAmountSom + commissionSom;
-            long amountTiyin = amountSom * 100;
-
-            Payment payment = Payment.builder()
-                    .user(user)
-                    .subscriptionPlan(plan)
-                    .amount(amountTiyin)
-                    .status(PaymentStatus.PENDING)
-                    .provider(PaymentProvider.PIXY)
-                    .paymentType(PaymentType.SUBSCRIPTION)
-                    .subscriptionDays(accessDays)
-                    .build();
-
-            payment = paymentRepository.save(payment);
-            log.info("Obuna to'lov order yaratildi: id={}, user={}, plan={}, davomiylik={}oy, amount={} tiyin",
-                    payment.getId(), user.getId(), plan.getId(), durationMonths, amountTiyin);
-
-            String payUrl = pixyService.createPayment(payment, amountSom);
-
-            return CreatePaymentOrderResponse.builder()
-                    .orderId(payment.getId())
-                    .durationMonths(durationMonths)
-                    .accessDays(accessDays)
-                    .baseAmountInSom(baseAmountSom)
-                    .commissionInSom(commissionSom)
-                    .amountInSom(amountSom)
-                    .amount(amountTiyin)
-                    .provider(PaymentProvider.PIXY)
-                    .payUrl(payUrl)
-                    .build();
-
+            originalSom = resolveSubscriptionPrice(plan, durationMonths);
         } else {
-            // ── INDIVIDUAL SERIAL TO'LOVI ───────────────────────────────
-            Series series = seriesRepo.findById(request.getSeriesId())
+            series = seriesRepo.findById(request.getSeriesId())
                     .orElseThrow(() -> new RuntimeException("Serial topilmadi: " + request.getSeriesId()));
-
-            long baseAmountSom = resolvePrice(series, durationMonths);
-            long commissionSom = baseAmountSom * 4 / 100;
-            long amountSom = baseAmountSom + commissionSom;
-            long amountTiyin = amountSom * 100;
-
-            Payment payment = Payment.builder()
-                    .user(user)
-                    .series(series)
-                    .amount(amountTiyin)
-                    .status(PaymentStatus.PENDING)
-                    .provider(PaymentProvider.PIXY)
-                    .paymentType(PaymentType.INDIVIDUAL_SERIES)
-                    .subscriptionDays(accessDays)
-                    .build();
-
-            payment = paymentRepository.save(payment);
-            log.info("Individual to'lov order yaratildi: id={}, user={}, series={}, davomiylik={}oy, amount={} tiyin",
-                    payment.getId(), user.getId(), series.getId(), durationMonths, amountTiyin);
-
-            String payUrl = pixyService.createPayment(payment, amountSom);
-
-            return CreatePaymentOrderResponse.builder()
-                    .orderId(payment.getId())
-                    .durationMonths(durationMonths)
-                    .accessDays(accessDays)
-                    .baseAmountInSom(baseAmountSom)
-                    .commissionInSom(commissionSom)
-                    .amountInSom(amountSom)
-                    .amount(amountTiyin)
-                    .provider(PaymentProvider.PIXY)
-                    .payUrl(payUrl)
-                    .build();
+            originalSom = resolvePrice(series, durationMonths);
         }
+
+        PromoCode promo = null;
+        long discountSom = 0;
+        if (request.getPromoCode() != null && !request.getPromoCode().isBlank()) {
+            promo = promoCodeService.validateFor(request.getPromoCode(), userId);
+            discountSom = promoCodeService.discountFor(promo, originalSom);
+        }
+
+        long baseSom = originalSom - discountSom;
+        long commissionSom = baseSom * 4 / 100;
+        return new Pricing(user, series, plan, durationMonths, originalSom, promo, discountSom,
+                baseSom, commissionSom, baseSom + commissionSom);
+    }
+
+    private CreatePaymentOrderResponse toResponse(Pricing p, Long orderId, String payUrl) {
+        return CreatePaymentOrderResponse.builder()
+                .orderId(orderId)
+                .durationMonths(p.durationMonths())
+                .accessDays(p.durationMonths() * 30)
+                .originalAmountInSom(p.originalSom())
+                .discountInSom(p.discountSom())
+                .promoCode(p.promo() != null ? p.promo().getCode() : null)
+                .baseAmountInSom(p.baseSom())
+                .commissionInSom(p.commissionSom())
+                .amountInSom(p.amountSom())
+                .amount(p.amountSom() * 100)
+                .provider(PaymentProvider.PIXY)
+                .payUrl(payUrl)
+                .build();
     }
 
     @Transactional

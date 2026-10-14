@@ -52,6 +52,13 @@ public class Payment {
 
     private Integer subscriptionDays;
 
+    // Promokod bilan to'lov bo'lsa: qaysi promokod va qancha chegirma (so'mda, komissiyasiz narxdan)
+    @ManyToOne
+    @JoinColumn(name = "promo_code_id")
+    private PromoCode promoCode;
+
+    private Long discountAmount;
+
     /** Qo'lda (MANUAL) to'lovni kiritgan admin email'i. */
     private String createdBy;
 

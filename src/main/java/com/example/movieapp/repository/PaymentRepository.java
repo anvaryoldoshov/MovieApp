@@ -21,6 +21,24 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     void deleteByUserId(Long userId);
 
+    boolean existsByUser_IdAndPromoCode_IdAndStatus(Long userId, Long promoCodeId, PaymentStatus status);
+
+    long countByPromoCode_IdAndStatus(Long promoCodeId, PaymentStatus status);
+
+    long countByPromoCode_Id(Long promoCodeId);
+
+    List<Payment> findByPromoCode_IdOrderByCreatedAtDesc(Long promoCodeId);
+
+    /** Har bir promokod bo'yicha: to'langan soni, to'lagan odamlar, jami chegirma, jami tushum (tiyin), qo'llab ko'rgan odamlar */
+    @Query("SELECT p.promoCode.id, " +
+            "SUM(CASE WHEN p.status = com.example.movieapp.enums.PaymentStatus.PAID THEN 1 ELSE 0 END), " +
+            "COUNT(DISTINCT CASE WHEN p.status = com.example.movieapp.enums.PaymentStatus.PAID THEN p.user.id END), " +
+            "COALESCE(SUM(CASE WHEN p.status = com.example.movieapp.enums.PaymentStatus.PAID THEN p.discountAmount ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN p.status = com.example.movieapp.enums.PaymentStatus.PAID THEN p.amount ELSE 0 END), 0), " +
+            "COUNT(DISTINCT p.user.id) " +
+            "FROM Payment p WHERE p.promoCode IS NOT NULL GROUP BY p.promoCode.id")
+    List<Object[]> promoCodeStats();
+
     List<Payment> findByUser_IdAndSeries_IdAndProviderAndStatus(Long userId, Long seriesId,
                                                                  PaymentProvider provider, PaymentStatus status);
 
