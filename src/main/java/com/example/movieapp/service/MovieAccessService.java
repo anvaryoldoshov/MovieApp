@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -148,12 +149,23 @@ public class MovieAccessService {
         User user = userRepo.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
 
+        boolean hadSubscription = Boolean.TRUE.equals(user.getSubscription());
+        LocalDate previousSubscriptionEnd = user.getSubscriptionEndDate();
         user.setSubscription(hasSubscription);
         log.info("Updating access for user {}. Subscription: {}, Days: {}", userId, hasSubscription, subscriptionDays);
 
         if (hasSubscription && subscriptionDays != null && subscriptionDays > 0) {
             // Obuna Yoqilgan
             LocalDate accessEndDate = LocalDate.now().plusDays(subscriptionDays);
+            if (!hadSubscription || !accessEndDate.equals(previousSubscriptionEnd)) {
+                userNotificationService.notifyUser(
+                        user,
+                        "SUBSCRIPTION_ACTIVATED",
+                        "Obunangiz faollashtirildi!",
+                        String.format("%d kunlik obuna faollashtirildi. Tugash sanasi: %s", subscriptionDays, accessEndDate),
+                        null
+                );
+            }
             user.setSubscriptionStartDate(LocalDate.now());
             user.setSubscriptionEndDate(accessEndDate);
 
@@ -184,6 +196,7 @@ public class MovieAccessService {
             List<MovieAccess> existingPaidAccesses = movieAccessRepository.findByUserAndPaidIsTrue(user);
             Set<Long> updatedSeriesIds = seriesAccessMap.keySet();
             LocalDate now = LocalDate.now();
+            List<MovieAccess> grantedAccesses = new ArrayList<>();
 
             // A. Individual Access yaratish/yangilash
             for (Map.Entry<Long, Integer> entry : seriesAccessMap.entrySet()) {
@@ -215,7 +228,15 @@ public class MovieAccessService {
                 if (manualPayments.containsKey(seriesId)) {
                     recordManualPayment(user, series, days, manualPayments.get(seriesId), adminEmail);
                 }
+
+                // Faqat yangi ochilgan yoki "to'lov qildi" bilan uzaytirilgan kirish haqida xabar beriladi,
+                // aks holda admin foydalanuvchini har safar saqlaganda takror bildirishnoma ketardi.
+                if (existingAccess.isEmpty() || manualPayments.containsKey(seriesId)) {
+                    grantedAccesses.add(access);
+                }
             }
+
+            notifyAccessGranted(user, grantedAccesses);
 
             // B. O'chirish
             existingPaidAccesses.stream()
@@ -230,6 +251,36 @@ public class MovieAccessService {
         userRepo.save(user); // Obuna o'rnatilsa ham, o'chirilmasa ham User obyekti saqlanadi
     }
 
+
+    private void notifyAccessGranted(User user, List<MovieAccess> grantedAccesses) {
+        if (grantedAccesses.isEmpty()) {
+            return;
+        }
+        if (grantedAccesses.size() == 1) {
+            MovieAccess access = grantedAccesses.get(0);
+            userNotificationService.notifyUser(
+                    user,
+                    "ACCESS_GRANTED",
+                    "Serialga kirish ochildi",
+                    String.format("\"%s\" serialini %s kunigacha tomosha qilishingiz mumkin",
+                            access.getMovie().getTitle(), access.getAccessEndDate()),
+                    null,
+                    access.getMovie().getId()
+            );
+            return;
+        }
+        LocalDate latestEnd = grantedAccesses.stream()
+                .map(MovieAccess::getAccessEndDate)
+                .max(LocalDate::compareTo)
+                .orElse(null);
+        userNotificationService.notifyUser(
+                user,
+                "ACCESS_GRANTED",
+                "Seriallarga kirish ochildi",
+                String.format("%d ta serialga kirish ochildi. Tugash sanasi: %s", grantedAccesses.size(), latestEnd),
+                null
+        );
+    }
 
     /** Admin "to'lov qildi" deb belgilaganda statistikaga tushadigan qo'lda to'lov yoziladi (summa so'mda, komissiyasiz). */
     private void recordManualPayment(User user, Series series, int days, Long amountSom, String adminEmail) {
