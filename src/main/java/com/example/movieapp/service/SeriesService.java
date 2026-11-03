@@ -1,6 +1,7 @@
 package com.example.movieapp.service;
 
 import com.example.movieapp.dto.GetDetailsResponse;
+import com.example.movieapp.dto.SalesSummaryDto;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.dto.SeriesLikeResponse;
 import com.example.movieapp.dto.SeriesMonthlyStatDto;
@@ -310,6 +311,16 @@ public class SeriesService {
                 months.stream().mapToLong(SeriesMonthlyStatDto.Month::getPaidAmount).sum(),
                 months.stream().mapToLong(SeriesMonthlyStatDto.Month::getManualAmount).sum(),
                 months);
+    }
+
+    /** Barcha seriallar va tariflar bo'yicha jami hamda shu oydagi sotuvlar. */
+    public SalesSummaryDto getSalesSummary() {
+        Object[] row = paymentRepository.salesSummary().get(0);
+        return new SalesSummaryDto(
+                ((Number) row[0]).longValue(),
+                ((Number) row[1]).longValue(),
+                ((Number) row[2]).longValue(),
+                ((Number) row[3]).longValue());
     }
 
     /** Telegram havolasi bo'sh bo'lsa — Telegram'da bepul qism yo'q, soni ham tozalanadi. */

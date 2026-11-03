@@ -1,6 +1,7 @@
 package com.example.movieapp.controller;
 
 import com.example.movieapp.dto.EpisodeDto;
+import com.example.movieapp.dto.SalesSummaryDto;
 import com.example.movieapp.dto.SeriesDto;
 import com.example.movieapp.dto.SeriesMonthlyStatDto;
 import com.example.movieapp.dto.SeriesStatDto;
@@ -174,6 +175,12 @@ public class SeriesController {
     @GetMapping("/statistics")
     public ResponseEntity<List<SeriesStatDto>> getStatistics() {
         return ResponseEntity.ok(seriesService.getSeriesStatistics());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/statistics/summary")
+    public ResponseEntity<SalesSummaryDto> getSalesSummary() {
+        return ResponseEntity.ok(seriesService.getSalesSummary());
     }
 
     @PreAuthorize("hasRole('ADMIN')")

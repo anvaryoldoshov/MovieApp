@@ -50,4 +50,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             "FROM payments WHERE series_id = :seriesId AND status = 'PAID' " +
             "GROUP BY month ORDER BY month DESC", nativeQuery = true)
     List<Object[]> monthlyStatsBySeries(@Param("seriesId") Long seriesId);
+
+    @Query(value = "SELECT COUNT(*), " +
+            "COALESCE(SUM(CASE WHEN provider = 'MANUAL' THEN amount / 100 ELSE ROUND(amount / 104.0) END), 0), " +
+            "COUNT(*) FILTER (WHERE created_at >= date_trunc('month', LOCALTIMESTAMP)), " +
+            "COALESCE(SUM(CASE WHEN provider = 'MANUAL' THEN amount / 100 ELSE ROUND(amount / 104.0) END) " +
+            "FILTER (WHERE created_at >= date_trunc('month', LOCALTIMESTAMP)), 0) " +
+            "FROM payments WHERE status = 'PAID'", nativeQuery = true)
+    List<Object[]> salesSummary();
 }
