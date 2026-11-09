@@ -26,6 +26,8 @@ public class BotSeriesMapping {
     @JoinColumn(name = "series_id")
     private Series series;
 
+    private Boolean autoMatched;
+
     private Instant createdAt;
 
     private Instant updatedAt;

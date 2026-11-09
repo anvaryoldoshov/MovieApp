@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
+import java.util.Locale;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -192,6 +194,7 @@ public class BotPurchaseService {
         } else {
             mapping.setSeries(null);
         }
+        mapping.setAutoMatched(false);
         mapping.setUpdatedAt(Instant.now());
         mapping = mappingRepository.save(mapping);
 
@@ -305,20 +308,56 @@ public class BotPurchaseService {
     private BotSeriesMapping upsertMapping(Long botSeriesId, String title) {
         BotSeriesMapping mapping = mappingRepository.findByBotSeriesId(botSeriesId).orElse(null);
         if (mapping == null) {
-            mapping = BotSeriesMapping.builder()
+            mapping = mappingRepository.save(BotSeriesMapping.builder()
                     .botSeriesId(botSeriesId)
                     .botTitle(title)
                     .createdAt(Instant.now())
                     .updatedAt(Instant.now())
-                    .build();
-            return mappingRepository.save(mapping);
-        }
-        if (title != null && !title.isBlank() && !title.equals(mapping.getBotTitle())) {
+                    .build());
+        } else if (title != null && !title.isBlank() && !title.equals(mapping.getBotTitle())) {
             mapping.setBotTitle(title);
             mapping.setUpdatedAt(Instant.now());
             mapping = mappingRepository.save(mapping);
         }
+        if (mapping.getSeries() == null && mapping.getAutoMatched() == null) {
+            mapping = tryAutoMatch(mapping);
+        }
         return mapping;
+    }
+
+    private BotSeriesMapping tryAutoMatch(BotSeriesMapping mapping) {
+        String key = normalizeTitle(mapping.getBotTitle());
+        if (key.isEmpty()) return mapping;
+
+        List<Series> matches = new ArrayList<>();
+        for (Series s : seriesRepo.findAll()) {
+            if (key.equals(normalizeTitle(s.getTitle()))) matches.add(s);
+        }
+        if (matches.size() != 1) {
+            if (matches.size() > 1) {
+                log.info("Bot seriali avtomatik bog'lanmadi, bir nechta mos nom: botSeriesId={}, title={}, soni={}",
+                        mapping.getBotSeriesId(), mapping.getBotTitle(), matches.size());
+            }
+            return mapping;
+        }
+
+        Series series = matches.get(0);
+        mapping.setSeries(series);
+        mapping.setAutoMatched(true);
+        mapping.setUpdatedAt(Instant.now());
+        mapping = mappingRepository.save(mapping);
+        log.info("Bot seriali nom bo'yicha avtomatik bog'landi: botSeriesId={} -> seriesId={} ({})",
+                mapping.getBotSeriesId(), series.getId(), series.getTitle());
+        applyPendingForMapping(mapping);
+        return mapping;
+    }
+
+    static String normalizeTitle(String raw) {
+        if (raw == null) return "";
+        String s = Normalizer.normalize(raw, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
+        s = s.replaceAll("[ʻʼ'‘’`´]", "");
+        s = s.replaceAll("[^\\p{L}\\p{N}]+", " ");
+        return s.trim().replaceAll("\\s+", " ");
     }
 
     private Map<String, Object> mappingDto(BotSeriesMapping m, long pendingCount) {
@@ -328,6 +367,7 @@ public class BotPurchaseService {
         dto.put("botTitle", m.getBotTitle());
         dto.put("seriesId", m.getSeries() != null ? m.getSeries().getId() : null);
         dto.put("seriesTitle", m.getSeries() != null ? m.getSeries().getTitle() : null);
+        dto.put("autoMatched", Boolean.TRUE.equals(m.getAutoMatched()));
         dto.put("pendingCount", pendingCount);
         dto.put("updatedAt", m.getUpdatedAt());
         return dto;
