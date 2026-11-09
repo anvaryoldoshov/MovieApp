@@ -10,4 +10,6 @@ public class UserDto {
     private String email;
     private Long userId;
     private Role role;
+    private Long telegramChatId;
+    private String telegramUsername;
 }

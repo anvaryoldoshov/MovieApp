@@ -10,6 +10,8 @@ import java.util.Optional;
 public interface UserRepo extends JpaRepository<User,Long> {
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByTelegramChatId(Long telegramChatId);
+
     boolean existsByUserId(Long userId);
 
     // Admin push'ni har bir foydalanuvchining inbox'iga yozish uchun (butun User obyektlarini yuklamasdan).

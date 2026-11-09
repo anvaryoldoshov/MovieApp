@@ -43,6 +43,12 @@ public class User {
     @Column(unique = true)
     private Long userId;
 
+    @Column(name = "telegram_chat_id", unique = true)
+    private Long telegramChatId;
+
+    @Column(name = "telegram_username")
+    private String telegramUsername;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

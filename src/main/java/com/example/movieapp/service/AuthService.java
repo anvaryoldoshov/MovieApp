@@ -136,9 +136,13 @@ public class AuthService {
                     return userRepo.save(newUser);
                 });
 
+        return ResponseEntity.ok(issueTokens(user, deviceId));
+    }
+
+    public AuthResponse issueTokens(User user, String deviceId) {
+        String email = user.getEmail();
         String accessToken = jwtService.generateAccessToken(email, user.getRole() != null ? user.getRole() : Role.USER);
         String refreshToken = refreshTokenService.createRefreshToken(email).getToken();
-
 
         userDeviceCreateOrUpdate(deviceId, user, accessToken);
 
@@ -152,7 +156,7 @@ public class AuthService {
         response.setRefreshToken(refreshToken);
         response.setDeviceId(deviceId);
 
-        return ResponseEntity.ok(response);
+        return response;
     }
 
 
