@@ -14,6 +14,7 @@ import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.EpisodeService;
 import com.example.movieapp.service.FileStorageService;
 import com.example.movieapp.service.MovieAccessService;
+import com.example.movieapp.service.ReminderService;
 import com.example.movieapp.service.SeriesService;
 import com.example.movieapp.service.WatchProgressService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class SeriesController {
     private final MovieAccessService movieAccessService;
     private final EpisodeService episodeService;
     private final WatchProgressService watchProgressService;
+    private final ReminderService reminderService;
 
     @GetMapping("/all")
     public ResponseEntity<List<SeriesDto>> series(Authentication authentication) {
@@ -60,20 +62,25 @@ public class SeriesController {
 
         EpisodeDto episode = episodeService.getEpisodeById(serialId, episodeId);
         episodeService.finalizeVideoUrlForAccess(episode, canWatch || episode.isFree());
+        if (episode.isScheduled()) {
+            episode.setReminded(!reminderService.remindedEpisodeIds(user.getId(), List.of(episodeId)).isEmpty());
+        }
         episode.setWatchedSeconds(watchProgressService.getProgressMap(user.getId(), List.of(episodeId))
                 .getOrDefault(episodeId, 0));
         return ResponseEntity.ok(episode);
     }
 
     @GetMapping("/{serialId}")
-    public ResponseEntity<?> getDetails(@PathVariable Long serialId, Authentication authentication) {
+    public ResponseEntity<?> getDetails(@PathVariable Long serialId,
+                                        @RequestParam(value = "includeScheduled", defaultValue = "false") boolean includeScheduled,
+                                        Authentication authentication) {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);
 
         boolean canWatch = movieAccessService.canUserWatchMovie(user.getId(), serialId);
 
-        var details = seriesService.getDetails(serialId, canWatch, user.getId());
+        var details = seriesService.getDetails(serialId, canWatch, user.getId(), includeScheduled);
         if (seriesService.isComingSoonLocked(serialId, authentication)) {
             details.setParts(List.of());
         }

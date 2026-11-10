@@ -5,6 +5,7 @@ import com.example.movieapp.entities.Episode;
 import com.example.movieapp.entities.Season;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.mapper.EpisodeMapper;
+import com.example.movieapp.repository.EpisodeReminderRepo;
 import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeasonRepo;
 import com.example.movieapp.repository.SeriesRepo;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 public class EpisodeService {
 
     private final EpisodeRepo episodeRepo;
+    private final EpisodeReminderRepo episodeReminderRepo;
     private final WatchProgressRepo watchProgressRepo;
     private final EpisodeMapper episodeMapper;
     private final SeriesRepo seriesRepo;
@@ -71,6 +74,7 @@ public class EpisodeService {
                 .series(series)
                 .season(season)
                 .build();
+        applyPublishSchedule(episode, dto.getPublishAt(), dto.getNotifyBuyers());
 
         Optional<BunnyStreamService.BunnyVideoInfo> bunnyInfo = applyDurationFromBunny(episode, dto.getVideoUrl());
 
@@ -236,10 +240,56 @@ public class EpisodeService {
     }
 
 
+    /**
+     * Yangi qism uchun chiqish vaqti: publishAt bo'sh bo'lsa darhol chiqadi. Darhol chiqib, xaridorlarga
+     * xabar berilishi kerak bo'lsa ham publishAt=hozir qo'yiladi — xabarni EpisodeReleaseService yuboradi.
+     */
+    private void applyPublishSchedule(Episode episode, Instant publishAt, Boolean notifyBuyers) {
+        boolean notify = Boolean.TRUE.equals(notifyBuyers);
+        episode.setNotifyBuyers(notify);
+        if (publishAt != null && publishAt.isAfter(Instant.now())) {
+            episode.setPublishAt(publishAt);
+            episode.setReleaseNotified(false);
+        } else if (notify) {
+            episode.setPublishAt(Instant.now());
+            episode.setReleaseNotified(false);
+        } else {
+            episode.setPublishAt(null);
+            episode.setReleaseNotified(true);
+        }
+    }
+
+    /**
+     * Admin rejani o'zgartiradi: publishAt kelajakda bo'lsa qism yashirin qoladi, bo'sh (yoki o'tgan vaqt)
+     * bo'lsa darhol chiqariladi va eslatma so'raganlarga xabar ketadi.
+     */
+    @Transactional
+    public ResponseEntity<EpisodeDto> updateSchedule(Long episodeId, Instant publishAt, Boolean notifyBuyers) {
+        return episodeRepo.findById(episodeId)
+                .map(episode -> {
+                    if (notifyBuyers != null) {
+                        episode.setNotifyBuyers(notifyBuyers);
+                    }
+                    if (publishAt != null && publishAt.isAfter(Instant.now())) {
+                        episode.setPublishAt(publishAt);
+                        episode.setReleaseNotified(false);
+                    } else if (episode.isScheduled()) {
+                        episode.setPublishAt(Instant.now());
+                        episode.setReleaseNotified(false);
+                    }
+                    Episode saved = episodeRepo.save(episode);
+                    EpisodeDto dto = episodeMapper.toEpisodeDto(saved);
+                    dto.setFree(isEpisodeFree(saved.getSeries(), saved.getId()));
+                    return ResponseEntity.ok(dto);
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
     @Transactional
     public ResponseEntity<Map<String, String>> deleteEpisode(Long episodeId) {
         return episodeRepo.findById(episodeId)
                 .map(ep -> {
+                    episodeReminderRepo.deleteByEpisodeId(ep.getId());
                     watchProgressRepo.deleteByEpisodeId(ep.getId());
                     episodeRepo.delete(ep);
                     return ResponseEntity.ok(Map.of("message", "Episode deleted"));
@@ -404,6 +454,10 @@ public class EpisodeService {
      */
     public void finalizeVideoUrlForAccess(EpisodeDto dto, boolean hasAccess) {
         dto.setHasAccess(hasAccess);
+        if (dto.isScheduled()) {
+            dto.setVideoUrl(null);
+            return;
+        }
         // Pullik qismning havolasi faqat kirish huquqi bo'lsa yoki qism bepul bo'lsa beriladi —
         // aks holda API orqali havolani olib, to'lovsiz ko'rish mumkin edi.
         if (hasAccess || dto.isFree()) {

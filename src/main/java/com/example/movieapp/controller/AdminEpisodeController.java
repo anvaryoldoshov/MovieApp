@@ -8,6 +8,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +38,9 @@ public class AdminEpisodeController {
             @RequestParam("videoUrl") String videoUrl,
             @RequestParam("episodeNumber") Integer episodeNumber,
             @RequestParam(value = "seasonId", required = false) Long seasonId,
-            @RequestParam(value = "image", required = false) MultipartFile image
+            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "publishAt", required = false) String publishAt,
+            @RequestParam(value = "notifyBuyers", required = false) Boolean notifyBuyers
     ) {
         // Simple validation
         if (title == null || title.isBlank() || videoUrl == null || videoUrl.isBlank()) {
@@ -56,6 +61,12 @@ public class AdminEpisodeController {
         episodeDto.setVideoUrl(videoUrl);
         episodeDto.setFileName(title);
         episodeDto.setSeasonId(seasonId);
+        try {
+            episodeDto.setPublishAt(parseInstant(publishAt));
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("publishAt noto'g'ri formatda (ISO-8601 kutiladi)");
+        }
+        episodeDto.setNotifyBuyers(notifyBuyers);
 
         // Fasl va bonus/bepul holati serverda avtomatik hisoblanadi (epizod raqami asosida)
         return ResponseEntity.ok(episodeService.addEpisode(seriesId, episodeDto));
@@ -104,6 +115,27 @@ public class AdminEpisodeController {
         return episodeService.updateEpisode(episodeId, episodeDto);
     }
 
+
+    // Rejalashtirilgan qism vaqtini o'zgartirish yoki darhol chiqarish (publishAt bo'sh = hozir)
+    @PutMapping("/episodes/{episodeId}/schedule")
+    public ResponseEntity<?> updateSchedule(@PathVariable Long episodeId, @RequestBody Map<String, Object> body) {
+        Object raw = body.get("publishAt");
+        Object notify = body.get("notifyBuyers");
+        try {
+            return episodeService.updateSchedule(episodeId,
+                    parseInstant(raw == null ? null : raw.toString()),
+                    notify == null ? null : Boolean.valueOf(notify.toString()));
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("publishAt noto'g'ri formatda (ISO-8601 kutiladi)");
+        }
+    }
+
+    private static Instant parseInstant(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return OffsetDateTime.parse(value.trim()).toInstant();
+    }
 
     @DeleteMapping("/episodes/{episodeId}")
     public ResponseEntity<?> deleteEpisode(@PathVariable Long episodeId) {

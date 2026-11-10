@@ -53,6 +53,11 @@ public class NotificationService {
 
     public int[] sendCustomNotificationToTokens(List<String> tokens, String title, String body, String imageUrl,
                                                 String sound, Map<String, String> extraData) {
+        return sendToTokens(tokens, "ADMIN_PUSH", title, body, imageUrl, sound, extraData);
+    }
+
+    public int[] sendToTokens(List<String> tokens, String type, String title, String body, String imageUrl,
+                              String sound, Map<String, String> extraData) {
         if (FirebaseApp.getApps().isEmpty()) {
             log.warn("Firebase sozlanmagan, push-notification yuborilmadi");
             return new int[]{0, 0};
@@ -69,7 +74,7 @@ public class NotificationService {
         Notification notification = buildNotification(title, body, imageUrl);
         AndroidConfig androidConfig = buildAndroidConfig(soundToUse);
         ApnsConfig apnsConfig = buildApnsConfig(soundToUse);
-        Map<String, String> data = buildData("ADMIN_PUSH", title, body, soundToUse, extraData);
+        Map<String, String> data = buildData(type, title, body, soundToUse, extraData);
 
         int successCount = 0;
         int failureCount = 0;

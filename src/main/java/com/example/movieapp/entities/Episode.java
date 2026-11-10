@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "episodes")
 @Getter
@@ -43,4 +45,16 @@ public class Episode {
     @ManyToOne
     @JoinColumn(name = "season_id")
     private Season season;
+
+    // null = darhol ko'rinadi; kelajakdagi vaqt = shu vaqtgacha ilovada "Tez kunda" bo'lib turadi
+    private Instant publishAt;
+
+    // Chiqqan paytda eslatma so'raganlarga (va notifyBuyers bo'lsa xaridorlarga) push yuborilganmi
+    private Boolean releaseNotified;
+
+    private Boolean notifyBuyers;
+
+    public boolean isScheduled() {
+        return publishAt != null && publishAt.isAfter(Instant.now());
+    }
 }

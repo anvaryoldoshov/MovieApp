@@ -7,6 +7,7 @@ import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserRepo;
 import com.example.movieapp.service.EpisodeService;
+import com.example.movieapp.service.ReminderService;
 import com.example.movieapp.service.SeriesService;
 import com.example.movieapp.service.MovieAccessService;
 import com.example.movieapp.service.WatchProgressService;
@@ -18,11 +19,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 @RestController
@@ -34,10 +37,21 @@ public class EpisodeController {
     private final MovieAccessService movieAccessService;
     private final WatchProgressService watchProgressService;
     private final SeriesService seriesService;
+    private final ReminderService reminderService;
+
+    @PostMapping("/{seriesId}/episode/{episodeId}/remind")
+    public ResponseEntity<Map<String, Boolean>> toggleEpisodeReminder(@PathVariable Long seriesId,
+                                                                      @PathVariable Long episodeId,
+                                                                      Authentication authentication) {
+        User user = userRepo.findByEmail(authentication.getName())
+                .orElseThrow(UserNotFoundException::new);
+        return ResponseEntity.ok(Map.of("reminded", reminderService.toggleEpisode(seriesId, episodeId, user)));
+    }
 
     @GetMapping("/{seriesId}/episodes")
     public ResponseEntity<List<EpisodeDto>> getEpisodesBySeries(
             @PathVariable Long seriesId,
+            @RequestParam(value = "includeScheduled", defaultValue = "false") boolean includeScheduled,
             Authentication authentication) {
         String email = authentication.getName();
         User user = userRepo.findByEmail(email)
@@ -46,8 +60,13 @@ public class EpisodeController {
             return ResponseEntity.ok(List.of());
         }
         boolean hasAccess = movieAccessService.canUserWatchMovie(user.getId(), seriesId);
-        List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId);
+        List<EpisodeDto> episodes = episodeService.getEpisodesBySeries(seriesId).stream()
+                .filter(ep -> includeScheduled || !ep.isScheduled())
+                .toList();
         episodes.forEach(ep -> episodeService.finalizeVideoUrlForAccess(ep, hasAccess));
+        Set<Long> reminded = reminderService.remindedEpisodeIds(user.getId(),
+                episodes.stream().filter(EpisodeDto::isScheduled).map(EpisodeDto::getId).toList());
+        episodes.forEach(ep -> ep.setReminded(reminded.contains(ep.getId())));
 
         Map<Long, Integer> progressMap = watchProgressService.getProgressMap(user.getId(),
                 episodes.stream().map(EpisodeDto::getId).toList());

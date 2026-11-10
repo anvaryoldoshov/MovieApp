@@ -1,9 +1,14 @@
 package com.example.movieapp.service;
 
+import com.example.movieapp.entities.Episode;
+import com.example.movieapp.entities.EpisodeReminder;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.entities.SeriesReminder;
 import com.example.movieapp.entities.User;
+import com.example.movieapp.exception.EpisodeNotFoundException;
 import com.example.movieapp.exception.SeriesNotFoundException;
+import com.example.movieapp.repository.EpisodeReminderRepo;
+import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeriesReminderRepo;
 import com.example.movieapp.repository.SeriesRepo;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -25,9 +33,34 @@ public class ReminderService {
     private final SeriesReminderRepo reminderRepo;
     private final SeriesRepo seriesRepo;
     private final UserNotificationService userNotificationService;
+    private final EpisodeReminderRepo episodeReminderRepo;
+    private final EpisodeRepo episodeRepo;
 
     public boolean isReminded(Long seriesId, Long userId) {
         return userId != null && reminderRepo.existsBySeries_IdAndUser_Id(seriesId, userId);
+    }
+
+    public Set<Long> remindedEpisodeIds(Long userId, Collection<Long> episodeIds) {
+        if (userId == null || episodeIds == null || episodeIds.isEmpty()) {
+            return Set.of();
+        }
+        return new HashSet<>(episodeReminderRepo.findRemindedEpisodeIds(userId, episodeIds));
+    }
+
+    // Faqat hali chiqmagan (rejalashtirilgan) qism uchun eslatma qo'yish mumkin
+    @Transactional
+    public boolean toggleEpisode(Long seriesId, Long episodeId, User user) {
+        var existing = episodeReminderRepo.findByEpisode_IdAndUser_Id(episodeId, user.getId());
+        if (existing.isPresent()) {
+            episodeReminderRepo.delete(existing.get());
+            return false;
+        }
+        Episode episode = episodeRepo.findById(episodeId).orElseThrow(EpisodeNotFoundException::new);
+        if (!episode.getSeries().getId().equals(seriesId) || !episode.isScheduled()) {
+            return false;
+        }
+        episodeReminderRepo.save(EpisodeReminder.builder().episode(episode).user(user).createdAt(Instant.now()).build());
+        return true;
     }
 
     @Transactional
@@ -68,10 +101,12 @@ public class ReminderService {
     @Transactional
     public void deleteBySeries(Long seriesId) {
         reminderRepo.deleteBySeriesId(seriesId);
+        episodeReminderRepo.deleteBySeriesId(seriesId);
     }
 
     @Transactional
     public void deleteByUser(Long userId) {
         reminderRepo.deleteByUserId(userId);
+        episodeReminderRepo.deleteByUserId(userId);
     }
 }

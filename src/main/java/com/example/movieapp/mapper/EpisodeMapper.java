@@ -15,6 +15,8 @@ public interface EpisodeMapper {
     @Mapping(target = "hasAccess", ignore = true)
     @Mapping(target = "free", ignore = true)
     @Mapping(target = "watchedSeconds", ignore = true)
+    @Mapping(target = "reminded", ignore = true)
+    @Mapping(target = "scheduled", expression = "java(episode.isScheduled())")
     @Mapping(target = "fileSizeMb", expression = "java(episode.getFileSizeBytes() == null ? null : episode.getFileSizeBytes() / (1024.0 * 1024.0))")
     @Mapping(source = "season.id", target = "seasonId")
     @Mapping(source = "season.seasonNumber", target = "seasonNumber")
@@ -27,6 +29,8 @@ public interface EpisodeMapper {
     @Mapping(source = "season.id", target = "seasonId")
     @Mapping(source = "season.seasonNumber", target = "seasonNumber")
     @Mapping(source = "season.title", target = "seasonTitle")
+    @Mapping(target = "reminded", ignore = true)
+    @Mapping(target = "scheduled", expression = "java(episode.isScheduled())")
     @Mapping(target = "durationSeconds", expression = "java(" +
             "(episode.getDurationHours() == null ? 0 : episode.getDurationHours() * 3600) + " +
             "(episode.getDurationMinutes() == null ? 0 : episode.getDurationMinutes() * 60) + " +

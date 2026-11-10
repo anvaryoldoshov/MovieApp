@@ -2,6 +2,8 @@ package com.example.movieapp.dto;
 
 import lombok.Data;
 
+import java.time.Instant;
+
 @Data
 public class EpisodeDto {
     private Long id;
@@ -35,5 +37,13 @@ public class EpisodeDto {
     private Integer seasonNumber;
 
     private int watchedSeconds; // foydalanuvchi shu epizodni necha soniyagacha ko'rgani
+
+    private Instant publishAt;
+
+    private boolean scheduled;
+
+    private boolean reminded;
+
+    private Boolean notifyBuyers;
 
 }

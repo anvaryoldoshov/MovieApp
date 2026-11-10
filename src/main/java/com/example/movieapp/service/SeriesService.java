@@ -90,17 +90,22 @@ public class SeriesService {
     }
 
     @Transactional
-    public GetDetailsResponse getDetails(Long seriesId, boolean hasAccess, Long userId) {
+    public GetDetailsResponse getDetails(Long seriesId, boolean hasAccess, Long userId, boolean includeScheduled) {
         Series series = seriesRepo.findById(seriesId).orElseThrow(SeriesNotFoundException::new);
 
         series.setViewCount((series.getViewCount() == null ? 0L : series.getViewCount()) + 1L);
         seriesRepo.save(series);
 
         List<Episode> episodes = FreeEpisodes.sorted(episodeRepo.findBySeriesId(seriesId));
-        List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes);
+        Set<Long> freeIdsAll = FreeEpisodes.ids(episodes);
+        List<EpisodePartDto> parts = episodeMapper.toPartDtoList(episodes.stream()
+                .filter(e -> includeScheduled || !e.isScheduled())
+                .toList());
+        Set<Long> remindedIds = reminderService.remindedEpisodeIds(userId, parts.stream()
+                .filter(EpisodePartDto::isScheduled).map(EpisodePartDto::getEpisodeId).toList());
 
         // Har serialning birinchi qismi (serialdagi tartib bo'yicha) obunasiz ham ochiq
-        Set<Long> freeIds = FreeEpisodes.ids(episodes);
+        Set<Long> freeIds = freeIdsAll;
         Map<Long, Integer> progressMap = userId != null
                 ? watchProgressService.getProgressMap(userId, parts.stream().map(EpisodePartDto::getEpisodeId).toList())
                 : Map.of();
@@ -110,6 +115,7 @@ public class SeriesService {
             part.setFree(isFree);
             part.setHasAccess(hasAccess || isFree);
             part.setWatchedSeconds(progressMap.getOrDefault(part.getEpisodeId(), 0));
+            part.setReminded(remindedIds.contains(part.getEpisodeId()));
         }
 
         long likeCount = seriesLikeRepo.countBySeries_Id(seriesId);
