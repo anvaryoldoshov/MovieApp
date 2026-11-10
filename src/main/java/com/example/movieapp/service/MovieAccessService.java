@@ -141,7 +141,7 @@ public class MovieAccessService {
     public void updateUserAccessWithSubscription(
             Long userId,
             Map<Long, Integer> seriesAccessMap,
-            boolean hasSubscription,
+            Boolean hasSubscription,
             Integer subscriptionDays,
             Map<Long, Long> manualPayments,
             String adminEmail
@@ -151,10 +151,12 @@ public class MovieAccessService {
 
         boolean hadSubscription = Boolean.TRUE.equals(user.getSubscription());
         LocalDate previousSubscriptionEnd = user.getSubscriptionEndDate();
-        user.setSubscription(hasSubscription);
+        if (hasSubscription != null) {
+            user.setSubscription(hasSubscription);
+        }
         log.info("Updating access for user {}. Subscription: {}, Days: {}", userId, hasSubscription, subscriptionDays);
 
-        if (hasSubscription && subscriptionDays != null && subscriptionDays > 0) {
+        if (Boolean.TRUE.equals(hasSubscription) && subscriptionDays != null && subscriptionDays > 0) {
             // Obuna Yoqilgan
             LocalDate accessEndDate = LocalDate.now().plusDays(subscriptionDays);
             if (!hadSubscription || !accessEndDate.equals(previousSubscriptionEnd)) {
@@ -189,9 +191,10 @@ public class MovieAccessService {
             }
 
         } else {
-            // Obuna O'chirilgan
-            user.setSubscriptionStartDate(null);
-            user.setSubscriptionEndDate(null);
+            if (hasSubscription != null) {
+                user.setSubscriptionStartDate(null);
+                user.setSubscriptionEndDate(null);
+            }
 
             List<MovieAccess> existingPaidAccesses = movieAccessRepository.findByUserAndPaidIsTrue(user);
             Set<Long> updatedSeriesIds = seriesAccessMap.keySet();

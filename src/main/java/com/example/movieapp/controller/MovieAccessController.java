@@ -72,7 +72,7 @@ public class MovieAccessController {
         movieAccessService.updateUserAccessWithSubscription(
                 userId,
                 seriesAccessMap,
-                hasSubscription != null ? hasSubscription : false,
+                hasSubscription,
                 subscriptionDays,
                 request.getManualPayments() != null ? request.getManualPayments() : Map.of(),
                 authentication != null ? authentication.getName() : null
