@@ -113,6 +113,7 @@ public class PaymentService {
         long originalSom;
         if (request.getSubscriptionPlanId() != null) {
             plan = subscriptionPlanRepo.findById(request.getSubscriptionPlanId())
+                    .filter(SubscriptionPlan::isActive)
                     .orElseThrow(SubscriptionPlanNotFoundException::new);
             originalSom = resolveSubscriptionPrice(plan, durationMonths);
         } else {
