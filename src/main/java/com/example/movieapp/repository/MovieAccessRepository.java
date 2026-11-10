@@ -15,6 +15,10 @@ import java.util.Optional;
 public interface MovieAccessRepository extends JpaRepository<MovieAccess, Long> {
     boolean existsByUserIdAndMovieIdAndPaidTrue(Long userId, Long movieId);
 
+    @Query("SELECT DISTINCT m.user.id FROM MovieAccess m WHERE m.movie.id IN :seriesIds " +
+            "AND m.paid = true AND (m.accessEndDate IS NULL OR m.accessEndDate >= CURRENT_DATE)")
+    List<Long> findActivePaidUserIdsBySeriesIds(@Param("seriesIds") Collection<Long> seriesIds);
+
     @Query("SELECT COUNT(m) > 0 FROM MovieAccess m WHERE m.movie.id = :seriesId " +
             "AND m.paid = true AND (m.accessEndDate IS NULL OR m.accessEndDate >= CURRENT_DATE)")
     boolean existsActivePaidAccessByMovieId(@Param("seriesId") Long seriesId);

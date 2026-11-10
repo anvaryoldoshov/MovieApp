@@ -1,6 +1,8 @@
 package com.example.movieapp.controller;
 
+import com.example.movieapp.enums.NotificationAudience;
 import com.example.movieapp.service.FileStorageService;
+import com.example.movieapp.service.NotificationAudienceService;
 import com.example.movieapp.service.NotificationService;
 import com.example.movieapp.service.UserNotificationService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -17,8 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -31,6 +35,7 @@ public class AdminNotificationController {
 
     private final NotificationService notificationService;
     private final UserNotificationService userNotificationService;
+    private final NotificationAudienceService notificationAudienceService;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
 
@@ -44,7 +49,9 @@ public class AdminNotificationController {
             @RequestParam("body") String body,
             @RequestParam(value = "sound", required = false) String sound,
             @RequestParam(value = "image", required = false) MultipartFile image,
-            @RequestParam(value = "data", required = false) String dataJson
+            @RequestParam(value = "data", required = false) String dataJson,
+            @RequestParam(value = "seriesIds", required = false) List<Long> seriesIds,
+            @RequestParam(value = "audience", required = false, defaultValue = "ACTIVE") NotificationAudience audience
     ) {
         if (title == null || title.isBlank() || body == null || body.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "title va body majburiy"));
@@ -55,6 +62,19 @@ public class AdminNotificationController {
             extraData = parseExtraData(dataJson);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", "data maydoni noto'g'ri JSON formatda"));
+        }
+
+        boolean targeted = seriesIds != null && !seriesIds.isEmpty();
+        Set<Long> targetUserIds = null;
+        if (targeted) {
+            targetUserIds = notificationAudienceService.resolveUserIds(seriesIds, audience);
+            if (targetUserIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Tanlangan seriallar bo'yicha foydalanuvchi topilmadi"));
+            }
+            if (seriesIds.size() == 1 && parseSeriesId(extraData) == null) {
+                extraData = extraData == null ? new HashMap<>() : new HashMap<>(extraData);
+                extraData.put("seriesId", seriesIds.get(0).toString());
+            }
         }
 
         String imageUrl = null;
@@ -68,19 +88,39 @@ public class AdminNotificationController {
         // push'ni o'chirib yuborsa, uni qayta topa olmaydi. Xato bo'lsa ham push yuborilaveradi.
         int savedToInbox = 0;
         try {
-            savedToInbox = userNotificationService.saveBroadcastToInbox("ADMIN_PUSH", title, body, imageUrl,
-                    parseSeriesId(extraData));
+            savedToInbox = targeted
+                    ? userNotificationService.saveToInbox(targetUserIds, "ADMIN_PUSH", title, body, imageUrl,
+                            parseSeriesId(extraData))
+                    : userNotificationService.saveBroadcastToInbox("ADMIN_PUSH", title, body, imageUrl,
+                            parseSeriesId(extraData));
         } catch (Exception e) {
             log.error("Admin push inbox'ga yozilmadi: {}", e.getMessage());
         }
 
-        int[] result = notificationService.sendCustomNotification(title, body, imageUrl, sound, extraData);
+        int[] result = targeted
+                ? notificationService.sendCustomNotificationToTokens(
+                        notificationAudienceService.findTokens(targetUserIds), title, body, imageUrl, sound, extraData)
+                : notificationService.sendCustomNotification(title, body, imageUrl, sound, extraData);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Push-notification yuborildi",
                 "success", result[0],
                 "failed", result[1],
-                "savedToInbox", savedToInbox
+                "savedToInbox", savedToInbox,
+                "targetUsers", targeted ? targetUserIds.size() : savedToInbox
+        ));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/audience-count")
+    public ResponseEntity<?> audienceCount(
+            @RequestParam("seriesIds") List<Long> seriesIds,
+            @RequestParam(value = "audience", required = false, defaultValue = "ACTIVE") NotificationAudience audience
+    ) {
+        Set<Long> userIds = notificationAudienceService.resolveUserIds(seriesIds, audience);
+        return ResponseEntity.ok(Map.of(
+                "users", userIds.size(),
+                "devices", userIds.isEmpty() ? 0 : notificationAudienceService.findTokens(userIds).size()
         ));
     }
 

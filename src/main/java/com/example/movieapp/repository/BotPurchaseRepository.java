@@ -4,6 +4,7 @@ import com.example.movieapp.entities.BotPurchase;
 import com.example.movieapp.enums.BotPurchaseStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -21,4 +22,7 @@ public interface BotPurchaseRepository extends JpaRepository<BotPurchase, Long> 
 
     @Query("SELECT p.botSeriesId, COUNT(p) FROM BotPurchase p WHERE p.status = com.example.movieapp.enums.BotPurchaseStatus.PENDING_MAPPING GROUP BY p.botSeriesId")
     List<Object[]> countPendingMappingByBotSeries();
+
+    @Query("SELECT DISTINCT p.user.id FROM BotPurchase p WHERE p.series.id IN :seriesIds AND p.user IS NOT NULL")
+    List<Long> findUserIdsBySeriesIds(@Param("seriesIds") Collection<Long> seriesIds);
 }

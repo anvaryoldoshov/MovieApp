@@ -18,4 +18,11 @@ public interface UserRepo extends JpaRepository<User,Long> {
     @Query("SELECT u.id FROM User u")
     List<Long> findAllIds();
 
+    @Query("SELECT u.id FROM User u WHERE u.subscription = true " +
+            "AND (u.subscriptionEndDate IS NULL OR u.subscriptionEndDate >= CURRENT_DATE)")
+    List<Long> findActiveSubscriberIds();
+
+    @Query("SELECT u.id FROM User u WHERE u.subscription = true OR u.subscriptionEndDate IS NOT NULL")
+    List<Long> findEverSubscribedIds();
+
 }

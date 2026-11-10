@@ -4,7 +4,9 @@ import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,5 +20,8 @@ public interface UserDeviceRepository extends JpaRepository<UserDevice, Long> {
 
     @Query("SELECT d.fcmToken FROM UserDevice d WHERE d.fcmToken IS NOT NULL")
     List<String> findAllFcmTokens();
+
+    @Query("SELECT d.fcmToken FROM UserDevice d WHERE d.fcmToken IS NOT NULL AND d.user.id IN :userIds")
+    List<String> findFcmTokensByUserIds(@Param("userIds") Collection<Long> userIds);
 
 }

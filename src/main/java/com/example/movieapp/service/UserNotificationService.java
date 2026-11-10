@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -70,8 +71,13 @@ public class UserNotificationService {
      */
     @Transactional
     public int saveBroadcastToInbox(String type, String title, String body, String imageUrl, Long seriesId) {
+        return saveToInbox(userRepo.findAllIds(), type, title, body, imageUrl, seriesId);
+    }
+
+    @Transactional
+    public int saveToInbox(Collection<Long> userIds, String type, String title, String body, String imageUrl, Long seriesId) {
         String safeBody = body != null && body.length() > 1000 ? body.substring(0, 1000) : body;
-        List<UserNotification> rows = userRepo.findAllIds().stream()
+        List<UserNotification> rows = userIds.stream()
                 .map(id -> UserNotification.builder()
                         .user(userRepo.getReferenceById(id))
                         .type(type)

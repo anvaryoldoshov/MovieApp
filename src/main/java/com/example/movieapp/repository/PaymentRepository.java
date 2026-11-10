@@ -10,9 +10,21 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.movieapp.entities.Payment;
 import com.example.movieapp.enums.PaymentProvider;
 import com.example.movieapp.enums.PaymentStatus;
+import com.example.movieapp.enums.PaymentType;
+import java.util.Collection;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByPixyHash(String pixyHash);
+
+    @Query("SELECT DISTINCT p.user.id FROM Payment p WHERE p.status = :status " +
+            "AND p.series.id IN :seriesIds AND p.user IS NOT NULL")
+    List<Long> findUserIdsBySeriesIdsAndStatus(@Param("seriesIds") Collection<Long> seriesIds,
+                                               @Param("status") PaymentStatus status);
+
+    @Query("SELECT DISTINCT p.user.id FROM Payment p WHERE p.status = :status " +
+            "AND p.paymentType = :type AND p.user IS NOT NULL")
+    List<Long> findUserIdsByTypeAndStatus(@Param("type") PaymentType type,
+                                          @Param("status") PaymentStatus status);
 
     @Modifying
     @Transactional

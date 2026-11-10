@@ -48,8 +48,16 @@ public class NotificationService {
             return new int[]{0, 0};
         }
 
-        List<String> tokens = userDeviceRepository.findAllFcmTokens();
-        if (tokens.isEmpty()) {
+        return sendCustomNotificationToTokens(userDeviceRepository.findAllFcmTokens(), title, body, imageUrl, sound, extraData);
+    }
+
+    public int[] sendCustomNotificationToTokens(List<String> tokens, String title, String body, String imageUrl,
+                                                String sound, Map<String, String> extraData) {
+        if (FirebaseApp.getApps().isEmpty()) {
+            log.warn("Firebase sozlanmagan, push-notification yuborilmadi");
+            return new int[]{0, 0};
+        }
+        if (tokens == null || tokens.isEmpty()) {
             return new int[]{0, 0};
         }
 
