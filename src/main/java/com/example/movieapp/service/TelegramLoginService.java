@@ -45,6 +45,7 @@ public class TelegramLoginService {
     private final BotPurchaseService botPurchaseService;
     private final BotSubscriptionFetcher botSubscriptionFetcher;
     private final TelegramOidcClient oidcClient;
+    private final AccountMergeService accountMergeService;
 
     public boolean isValidCode(String code) {
         return code != null && CODE_PATTERN.matcher(code).matches();
@@ -54,6 +55,73 @@ public class TelegramLoginService {
         if (deviceId == null || deviceId.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "deviceId majburiy"));
         }
+        return createLogin(deviceId, null);
+    }
+
+    public ResponseEntity<?> startLink(User current) {
+        return createLogin("link:" + current.getId(), current.getId());
+    }
+
+    @Transactional
+    public ResponseEntity<?> checkLink(String code, User current) {
+        TelegramLogin login = isValidCode(code) ? telegramLoginRepository.findByCode(code).orElse(null) : null;
+        if (login == null || login.getLinkUserId() == null || !login.getLinkUserId().equals(current.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "NOT_FOUND"));
+        }
+        if (login.getStatus() == TelegramLoginStatus.USED) {
+            return ResponseEntity.status(HttpStatus.GONE).body(Map.of("status", "EXPIRED"));
+        }
+        if (login.getStatus() == TelegramLoginStatus.PENDING) {
+            if (Instant.now().isAfter(login.getExpiresAt())) {
+                return ResponseEntity.status(HttpStatus.GONE).body(Map.of("status", "EXPIRED"));
+            }
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("status", "PENDING"));
+        }
+
+        Long chatId = login.getChatId();
+        login.setStatus(TelegramLoginStatus.USED);
+        telegramLoginRepository.save(login);
+
+        if (current.getTelegramChatId() != null && !current.getTelegramChatId().equals(chatId)) {
+            return conflict("ALREADY_LINKED", "Hisobingizga boshqa Telegram akkaunt ulangan");
+        }
+
+        User owner = userRepo.findByTelegramChatId(chatId).orElse(null);
+        User target;
+        if (owner != null && !owner.getId().equals(current.getId())) {
+            if (!AccountMergeService.isTelegramOnly(owner)) {
+                return conflict("TELEGRAM_IN_USE", "Bu Telegram akkaunt boshqa hisobga ulangan");
+            }
+            target = accountMergeService.merge(owner.getId(), current.getId());
+        } else {
+            current.setTelegramChatId(chatId);
+            current.setTelegramUsername(login.getTgUsername());
+            target = userRepo.save(current);
+        }
+        if (login.getTgUsername() != null) {
+            target.setTelegramUsername(login.getTgUsername());
+            target = userRepo.save(target);
+        }
+
+        botSubscriptionFetcher.sync(chatId);
+        botPurchaseService.applyPendingForUser(target);
+        log.info("Telegram hisobga ulandi: user={}, chatId={}", target.getId(), chatId);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", "LINKED");
+        body.put("telegramChatId", target.getTelegramChatId());
+        body.put("telegramUsername", target.getTelegramUsername());
+        return ResponseEntity.ok(body);
+    }
+
+    private ResponseEntity<?> conflict(String status, String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", status);
+        body.put("message", message);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    private ResponseEntity<?> createLogin(String deviceId, Long linkUserId) {
         if (!oidcClient.isConfigured()) {
             log.error("telegram.oidc.client-id / client-secret / redirect-uri sozlanmagan");
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("message", "Telegram login sozlanmagan"));
@@ -69,6 +137,7 @@ public class TelegramLoginService {
         telegramLoginRepository.save(TelegramLogin.builder()
                 .code(code)
                 .codeVerifier(verifier)
+                .linkUserId(linkUserId)
                 .deviceId(deviceId)
                 .status(TelegramLoginStatus.PENDING)
                 .createdAt(now)
@@ -121,7 +190,7 @@ public class TelegramLoginService {
     @Transactional
     public ResponseEntity<?> check(String code, String deviceId) {
         TelegramLogin login = isValidCode(code) ? telegramLoginRepository.findByCode(code).orElse(null) : null;
-        if (login == null || deviceId == null || !deviceId.equals(login.getDeviceId())) {
+        if (login == null || login.getLinkUserId() != null || deviceId == null || !deviceId.equals(login.getDeviceId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "NOT_FOUND"));
         }
 

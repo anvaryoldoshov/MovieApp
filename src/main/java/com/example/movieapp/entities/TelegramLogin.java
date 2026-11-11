@@ -46,4 +46,6 @@ public class TelegramLogin {
 
     @Column(length = 128)
     private String codeVerifier;
+
+    private Long linkUserId;
 }
