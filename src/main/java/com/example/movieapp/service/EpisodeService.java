@@ -117,25 +117,7 @@ public class EpisodeService {
             return seasonRepo.save(newSeason);
         }
 
-        if (episodeNumber == null) {
-            return seasons.get(0);
-        }
-
-        int cumulative = 0;
-        for (Season season : seasons) {
-            Integer capacity = season.getEpisodeCount();
-            if (capacity == null || capacity <= 0) {
-                // Sig'imi belgilanmagan fasl - shu nuqtadan keyingi hamma epizod shu faslga tushadi
-                return season;
-            }
-            cumulative += capacity;
-            if (episodeNumber <= cumulative) {
-                return season;
-            }
-        }
-
-        // Barcha fasllarning belgilangan sig'imidan oshib ketdi - oxirgi faslga qo'shiladi
-        return seasons.get(seasons.size() - 1);
+        return SeasonService.seasonFor(seasons, episodeNumber);
     }
 
     /** Serialning birinchi qismimi (FreeEpisodes) — saqlanmaydi, har doim jonli hisoblanadi. */

@@ -5,6 +5,7 @@ import com.example.movieapp.entities.Season;
 import com.example.movieapp.entities.Series;
 import com.example.movieapp.repository.EpisodeRepo;
 import com.example.movieapp.repository.SeasonRepo;
+import com.example.movieapp.service.SeasonService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,14 +28,22 @@ public class SeasonBackfillRunner implements ApplicationRunner {
 
     private final EpisodeRepo episodeRepo;
     private final SeasonRepo seasonRepo;
+    private final SeasonService seasonService;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         List<Episode> orphanEpisodes = episodeRepo.findBySeasonIsNull();
-        if (orphanEpisodes.isEmpty()) {
-            return;
+        if (!orphanEpisodes.isEmpty()) {
+            backfill(orphanEpisodes);
         }
+        int moved = seasonService.reassignAll();
+        if (moved > 0) {
+            log.info("Ishga tushishda fasllar qayta taqsimlandi: {} ta epizod ko'chirildi.", moved);
+        }
+    }
+
+    private void backfill(List<Episode> orphanEpisodes) {
 
         Map<Long, Season> firstSeasonBySeriesId = new HashMap<>();
 
