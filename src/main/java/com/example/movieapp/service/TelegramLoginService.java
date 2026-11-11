@@ -1,7 +1,6 @@
 package com.example.movieapp.service;
 
 import com.example.movieapp.dto.AuthResponse;
-import com.example.movieapp.dto.TelegramConfirmRequest;
 import com.example.movieapp.entities.TelegramLogin;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.enums.Role;
@@ -11,20 +10,16 @@ import com.example.movieapp.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -35,8 +30,9 @@ public class TelegramLoginService {
 
     public static final String FAKE_EMAIL_DOMAIN = "@telegram.tarixiykinolar.uz";
 
+    public enum CallbackResult { SUCCESS, CANCELLED, EXPIRED, FAILED }
+
     private static final Logger log = LoggerFactory.getLogger(TelegramLoginService.class);
-    private static final String CODE_PREFIX = "login_";
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
     private static final int CODE_LENGTH = 24;
     private static final Pattern CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]{" + CODE_LENGTH + "}$");
@@ -47,18 +43,8 @@ public class TelegramLoginService {
     private final UserRepo userRepo;
     private final AuthService authService;
     private final BotPurchaseService botPurchaseService;
-
-    @Value("${telegram.login.bot-id:}")
-    private String botId;
-
-    @Value("${telegram.login.origin:}")
-    private String origin;
-
-    @Value("${telegram.login.return-url:}")
-    private String returnUrl;
-
-    @Value("${telegram.login.api-key:}")
-    private String apiKey;
+    private final BotSubscriptionFetcher botSubscriptionFetcher;
+    private final TelegramOidcClient oidcClient;
 
     public boolean isValidCode(String code) {
         return code != null && CODE_PATTERN.matcher(code).matches();
@@ -68,8 +54,8 @@ public class TelegramLoginService {
         if (deviceId == null || deviceId.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "deviceId majburiy"));
         }
-        if (isBlank(botId) || isBlank(origin) || isBlank(returnUrl)) {
-            log.error("telegram.login.bot-id / origin / return-url sozlanmagan");
+        if (!oidcClient.isConfigured()) {
+            log.error("telegram.oidc.client-id / client-secret / redirect-uri sozlanmagan");
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("message", "Telegram login sozlanmagan"));
         }
 
@@ -77,75 +63,59 @@ public class TelegramLoginService {
         do {
             code = randomCode();
         } while (telegramLoginRepository.existsByCode(code));
+        String verifier = randomVerifier();
 
         Instant now = Instant.now();
         telegramLoginRepository.save(TelegramLogin.builder()
                 .code(code)
+                .codeVerifier(verifier)
                 .deviceId(deviceId)
                 .status(TelegramLoginStatus.PENDING)
                 .createdAt(now)
                 .expiresAt(now.plus(TTL))
                 .build());
 
-        String returnTo = UriComponentsBuilder.fromHttpUrl(returnUrl)
-                .queryParam("login_code", code)
-                .toUriString();
-        String authUrl = "https://oauth.telegram.org/auth"
-                + "?bot_id=" + URLEncoder.encode(botId, StandardCharsets.UTF_8)
-                + "&origin=" + URLEncoder.encode(origin, StandardCharsets.UTF_8)
-                + "&return_to=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
-
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("code", code);
-        body.put("authUrl", authUrl);
+        body.put("authUrl", oidcClient.authorizationUrl(code, verifier));
         body.put("expiresIn", TTL.toSeconds());
         return ResponseEntity.ok(body);
     }
 
     @Transactional
-    public ResponseEntity<Map<String, Object>> confirm(String key, TelegramConfirmRequest request) {
-        if (!validApiKey(key)) {
-            return reply(HttpStatus.UNAUTHORIZED, false, "Ruxsat yo'q", "UNAUTHORIZED");
+    public CallbackResult callback(String state, String authCode, String error) {
+        TelegramLogin login = isValidCode(state) ? telegramLoginRepository.findByCode(state).orElse(null) : null;
+        if (login == null || login.getStatus() != TelegramLoginStatus.PENDING) {
+            return CallbackResult.EXPIRED;
         }
+        if (Instant.now().isAfter(login.getExpiresAt())) {
+            return CallbackResult.EXPIRED;
+        }
+        if (error != null && !error.isBlank()) {
+            log.info("Telegram login bekor qilindi: error={}", error);
+            return CallbackResult.CANCELLED;
+        }
+        if (authCode == null || authCode.isBlank() || login.getCodeVerifier() == null) {
+            return CallbackResult.FAILED;
+        }
+
+        TelegramOidcClient.TelegramIdentity identity;
         try {
-            String code = normalize(request != null ? request.getLoginCode() : null);
-            TelegramConfirmRequest.TelegramUser tgUser = request != null ? request.getUser() : null;
-            if (!isValidCode(code) || tgUser == null || tgUser.getChatId() == null) {
-                return reply(HttpStatus.NOT_FOUND, false, "Mavjud emas", "NOT_FOUND");
-            }
-
-            TelegramLogin login = telegramLoginRepository.findByCode(code).orElse(null);
-            if (login == null) {
-                return reply(HttpStatus.NOT_FOUND, false, "Mavjud emas", "NOT_FOUND");
-            }
-            if (login.getStatus() != TelegramLoginStatus.PENDING) {
-                if (login.getStatus() == TelegramLoginStatus.CONFIRMED && tgUser.getChatId().equals(login.getChatId())) {
-                    return reply(HttpStatus.OK, true, "Tasdiqlandi", "SUCCESS");
-                }
-                return reply(HttpStatus.GONE, false, "Eskirgan", "EXPIRED");
-            }
-            if (Instant.now().isAfter(login.getExpiresAt())) {
-                return reply(HttpStatus.GONE, false, "Eskirgan", "EXPIRED");
-            }
-
-            login.setStatus(TelegramLoginStatus.CONFIRMED);
-            login.setConfirmedAt(Instant.now());
-            login.setChatId(tgUser.getChatId());
-            login.setFirstName(tgUser.getFirstName());
-            login.setLastName(tgUser.getLastName());
-            login.setTgUsername(tgUser.getUsername());
-            telegramLoginRepository.save(login);
-
-            int subs = botPurchaseService.receiveLoginSubscriptions(tgUser.getChatId(), tgUser.getSubscriptions());
-            if (subs > 0) {
-                log.info("Telegram login obunalari qabul qilindi: chatId={}, soni={}", tgUser.getChatId(), subs);
-            }
-
-            return reply(HttpStatus.OK, true, "Tasdiqlandi", "SUCCESS");
+            identity = oidcClient.exchange(authCode, login.getCodeVerifier());
         } catch (Exception e) {
-            log.error("Telegram confirm xatosi", e);
-            return reply(HttpStatus.INTERNAL_SERVER_ERROR, false, "Server ichki muammosi", "INTERNAL_ERROR");
+            log.error("Telegram OIDC token almashtirish xatosi: {}", e.getMessage());
+            return CallbackResult.FAILED;
         }
+
+        login.setStatus(TelegramLoginStatus.CONFIRMED);
+        login.setConfirmedAt(Instant.now());
+        login.setCodeVerifier(null);
+        login.setChatId(identity.getId());
+        login.setFirstName(identity.getFirstName());
+        login.setLastName(identity.getLastName());
+        login.setTgUsername(identity.getUsername());
+        telegramLoginRepository.save(login);
+        return CallbackResult.SUCCESS;
     }
 
     @Transactional
@@ -169,6 +139,7 @@ public class TelegramLoginService {
         User user = findOrCreateUser(login);
         login.setStatus(TelegramLoginStatus.USED);
         telegramLoginRepository.save(login);
+        botSubscriptionFetcher.sync(user.getTelegramChatId());
         botPurchaseService.applyPendingForUser(user);
 
         AuthResponse response = authService.issueTokens(user, deviceId);
@@ -212,24 +183,6 @@ public class TelegramLoginService {
         return sb.isEmpty() ? "Telegram foydalanuvchi" : sb.toString();
     }
 
-    private boolean isBlank(String v) {
-        return v == null || v.isBlank();
-    }
-
-    private String normalize(String raw) {
-        if (raw == null) return null;
-        String code = raw.trim();
-        if (code.startsWith(CODE_PREFIX)) code = code.substring(CODE_PREFIX.length());
-        return code;
-    }
-
-    private boolean validApiKey(String key) {
-        if (isBlank(apiKey) || key == null) return false;
-        return MessageDigest.isEqual(
-                apiKey.getBytes(StandardCharsets.UTF_8),
-                key.getBytes(StandardCharsets.UTF_8));
-    }
-
     private String randomCode() {
         StringBuilder sb = new StringBuilder(CODE_LENGTH);
         for (int i = 0; i < CODE_LENGTH; i++) {
@@ -238,11 +191,9 @@ public class TelegramLoginService {
         return sb.toString();
     }
 
-    private ResponseEntity<Map<String, Object>> reply(HttpStatus status, boolean ok, String message, String code) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("ok", ok);
-        body.put("message", message);
-        body.put("code", code);
-        return ResponseEntity.status(status).body(body);
+    private String randomVerifier() {
+        byte[] bytes = new byte[48];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

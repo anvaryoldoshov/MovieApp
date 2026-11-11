@@ -43,4 +43,7 @@ public class TelegramLogin {
     private String lastName;
 
     private String tgUsername;
+
+    @Column(length = 128)
+    private String codeVerifier;
 }

@@ -6,7 +6,6 @@ import com.example.movieapp.dto.GoogleLoginRequest;
 import com.example.movieapp.dto.LogoutRequest;
 import com.example.movieapp.dto.RefreshRequest;
 import com.example.movieapp.dto.SignInRequest;
-import com.example.movieapp.dto.TelegramConfirmRequest;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.entities.UserDevice;
 import com.example.movieapp.repository.UserDeviceRepository;
@@ -104,11 +103,41 @@ public class AuthController {
         return telegramLoginService.start(deviceId);
     }
 
-    @PostMapping("/telegram/confirm")
-    public ResponseEntity<?> telegramConfirm(
-            @RequestHeader(value = "X-API-Key", required = false) String apiKey,
-            @RequestBody(required = false) TelegramConfirmRequest request) {
-        return telegramLoginService.confirm(apiKey, request);
+    @GetMapping(value = "/telegram/callback", produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> telegramCallback(@RequestParam(value = "state", required = false) String state,
+                                                   @RequestParam(value = "code", required = false) String code,
+                                                   @RequestParam(value = "error", required = false) String error) {
+        TelegramLoginService.CallbackResult result = telegramLoginService.callback(state, code, error);
+        String title;
+        String text;
+        switch (result) {
+            case SUCCESS -> {
+                title = "Muvaffaqiyatli kirdingiz";
+                text = "Ilovaga qayting, kirish avtomatik davom etadi.";
+            }
+            case CANCELLED -> {
+                title = "Kirish bekor qilindi";
+                text = "Ilovaga qaytib, qaytadan urinib ko'ring.";
+            }
+            case EXPIRED -> {
+                title = "Havola eskirgan";
+                text = "Ilovaga qaytib, Telegram orqali qaytadan kiring.";
+            }
+            default -> {
+                title = "Xatolik yuz berdi";
+                text = "Ilovaga qaytib, qaytadan urinib ko'ring.";
+            }
+        }
+        String html = "<!doctype html><html lang=\"uz\"><head><meta charset=\"utf-8\">"
+                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                + "<title>Tarixiy Kinolar</title>"
+                + "<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;"
+                + "background:#0f1115;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box}"
+                + "h1{font-size:22px;margin:0 0 12px}p{color:#aab;font-size:16px;margin:0}</style></head><body><div>"
+                + "<h1>" + title + "</h1><p>" + text + "</p></div></body></html>";
+        return ResponseEntity.status(result == TelegramLoginService.CallbackResult.SUCCESS ? HttpStatus.OK : HttpStatus.BAD_REQUEST)
+                .header("Cache-Control", "no-store")
+                .body(html);
     }
 
     @GetMapping("/telegram/check")
