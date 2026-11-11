@@ -3,6 +3,10 @@ package com.example.movieapp.service;
 import com.example.movieapp.dto.TelegramConfirmRequest;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.web.client.DefaultResponseErrorHandler;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -47,15 +51,24 @@ public class BotSubscriptionFetcher {
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
             headers.set("X-API-Key", apiKey);
 
-            ResponseEntity<UserInfoResponse> res = http.exchange(
+            ResponseEntity<String> res = http.exchange(
                     userInfoUrl,
                     HttpMethod.POST,
                     new HttpEntity<>(Map.of("telegram_id", chatId), headers),
-                    UserInfoResponse.class);
+                    String.class);
 
-            UserInfoResponse body = res.getBody();
+            String raw = res.getBody();
+            UserInfoResponse body;
+            try {
+                body = raw == null || raw.isBlank() ? null : MAPPER.readValue(raw.trim(), UserInfoResponse.class);
+            } catch (Exception parseError) {
+                log.warn("Bot obunalari: javob JSON emas, chatId={}, status={}, body={}",
+                        chatId, res.getStatusCode().value(), snippet(raw));
+                return 0;
+            }
             if (body == null || !Boolean.TRUE.equals(body.getOk())) {
-                log.info("Bot obunalari: ok=false, chatId={}", chatId);
+                log.info("Bot obunalari: ok=false, chatId={}, status={}, body={}",
+                        chatId, res.getStatusCode().value(), snippet(raw));
                 return 0;
             }
             if (body.getTelegramId() != null && !body.getTelegramId().equals(chatId)) {
@@ -73,11 +86,27 @@ public class BotSubscriptionFetcher {
         }
     }
 
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    private static String snippet(String raw) {
+        if (raw == null) return "null";
+        String s = raw.replaceAll("\\s+", " ").trim();
+        return s.length() > 500 ? s.substring(0, 500) + "..." : s;
+    }
+
     private static RestTemplate buildClient() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(4_000);
         factory.setReadTimeout(6_000);
-        return new RestTemplate(factory);
+        RestTemplate rt = new RestTemplate(factory);
+        rt.setErrorHandler(new DefaultResponseErrorHandler() {
+            @Override
+            public boolean hasError(ClientHttpResponse response) {
+                return false;
+            }
+        });
+        return rt;
     }
 
     @Data
