@@ -1,5 +1,6 @@
 package com.example.movieapp.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
@@ -48,6 +49,7 @@ public class TelegramOidcClient {
     private static final Duration JWKS_MIN_REFRESH = Duration.ofMinutes(1);
 
     private final RestTemplate http;
+    private final ObjectMapper mapper = new ObjectMapper();
     private final Map<String, PublicKey> keys = new ConcurrentHashMap<>();
     private volatile Instant keysFetchedAt = Instant.EPOCH;
 
@@ -65,6 +67,12 @@ public class TelegramOidcClient {
         factory.setConnectTimeout(5_000);
         factory.setReadTimeout(10_000);
         this.http = new RestTemplate(factory);
+        this.http.setErrorHandler(new org.springframework.web.client.DefaultResponseErrorHandler() {
+            @Override
+            public boolean hasError(org.springframework.http.client.ClientHttpResponse response) {
+                return false;
+            }
+        });
     }
 
     public boolean isConfigured() {
@@ -95,11 +103,12 @@ public class TelegramOidcClient {
         form.add("client_id", clientId);
         form.add("code_verifier", codeVerifier);
 
-        ResponseEntity<Map> res = http.exchange(TOKEN_URL, HttpMethod.POST, new HttpEntity<>(form, headers), Map.class);
-        Map<?, ?> body = res.getBody();
+        ResponseEntity<String> res = http.exchange(TOKEN_URL, HttpMethod.POST, new HttpEntity<>(form, headers), String.class);
+        String raw = res.getBody();
+        Map<?, ?> body = parseJson(raw);
         Object idToken = body != null ? body.get("id_token") : null;
         if (!(idToken instanceof String token) || token.isBlank()) {
-            throw new IllegalStateException("Telegram javobida id_token yo'q");
+            throw new IllegalStateException("Telegram javobida id_token yo'q: status=" + res.getStatusCode().value() + ", body=" + redact(raw));
         }
         return verify(token);
     }
@@ -156,7 +165,11 @@ public class TelegramOidcClient {
     }
 
     private synchronized void loadKeys() {
-        Map<?, ?> jwks = http.getForObject(JWKS_URL, Map.class);
+        String raw = http.getForObject(JWKS_URL, String.class);
+        Map<?, ?> jwks = parseJson(raw);
+        if (jwks == null) {
+            throw new IllegalStateException("JWKS javobini o'qib bo'lmadi: " + redact(raw));
+        }
         Object list = jwks != null ? jwks.get("keys") : null;
         if (!(list instanceof Collection<?> items)) {
             throw new IllegalStateException("JWKS formati noto'g'ri");
@@ -179,7 +192,24 @@ public class TelegramOidcClient {
         keysFetchedAt = Instant.now();
     }
 
+    private Map<?, ?> parseJson(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            Object v = mapper.readValue(raw.trim(), Object.class);
+            return v instanceof Map<?, ?> m ? m : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String redact(String raw) {
+        if (raw == null) return "null";
+        String s = raw.replaceAll("(\"(?:id_token|access_token|refresh_token)\"\\s*:\\s*\")[^\"]*", "$1***");
+        return s.length() > 500 ? s.substring(0, 500) + "..." : s;
+    }
+
     private boolean audienceMatches(Object aud) {
+        if (aud instanceof Number n) return clientId.equals(String.valueOf(n.longValue()));
         if (aud instanceof String s) return clientId.equals(s);
         if (aud instanceof Collection<?> c) return c.stream().anyMatch(a -> clientId.equals(String.valueOf(a)));
         return false;
