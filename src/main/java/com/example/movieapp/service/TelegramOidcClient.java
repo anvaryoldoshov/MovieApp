@@ -95,6 +95,7 @@ public class TelegramOidcClient {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         headers.setBasicAuth(clientId, clientSecret, StandardCharsets.UTF_8);
+        headers.set(HttpHeaders.ACCEPT_ENCODING, "identity");
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "authorization_code");
@@ -103,8 +104,8 @@ public class TelegramOidcClient {
         form.add("client_id", clientId);
         form.add("code_verifier", codeVerifier);
 
-        ResponseEntity<String> res = http.exchange(TOKEN_URL, HttpMethod.POST, new HttpEntity<>(form, headers), String.class);
-        String raw = res.getBody();
+        ResponseEntity<byte[]> res = http.exchange(TOKEN_URL, HttpMethod.POST, new HttpEntity<>(form, headers), byte[].class);
+        String raw = HttpBodies.decode(res.getBody());
         Map<?, ?> body = parseJson(raw);
         Object idToken = body != null ? body.get("id_token") : null;
         if (!(idToken instanceof String token) || token.isBlank()) {
@@ -165,7 +166,11 @@ public class TelegramOidcClient {
     }
 
     private synchronized void loadKeys() {
-        String raw = http.getForObject(JWKS_URL, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.set(HttpHeaders.ACCEPT_ENCODING, "identity");
+        String raw = HttpBodies.decode(
+                http.exchange(JWKS_URL, HttpMethod.GET, new HttpEntity<>(headers), byte[].class).getBody());
         Map<?, ?> jwks = parseJson(raw);
         if (jwks == null) {
             throw new IllegalStateException("JWKS javobini o'qib bo'lmadi: " + redact(raw));
@@ -205,7 +210,7 @@ public class TelegramOidcClient {
     private static String redact(String raw) {
         if (raw == null) return "null";
         String s = raw.replaceAll("(\"(?:id_token|access_token|refresh_token)\"\\s*:\\s*\")[^\"]*", "$1***");
-        return s.length() > 500 ? s.substring(0, 500) + "..." : s;
+        return HttpBodies.printable(s, 500);
     }
 
     private boolean audienceMatches(Object aud) {

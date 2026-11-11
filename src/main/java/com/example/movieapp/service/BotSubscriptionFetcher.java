@@ -50,14 +50,15 @@ public class BotSubscriptionFetcher {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
             headers.set("X-API-Key", apiKey);
+            headers.set(HttpHeaders.ACCEPT_ENCODING, "identity");
 
-            ResponseEntity<String> res = http.exchange(
+            ResponseEntity<byte[]> res = http.exchange(
                     userInfoUrl,
                     HttpMethod.POST,
                     new HttpEntity<>(Map.of("telegram_id", chatId), headers),
-                    String.class);
+                    byte[].class);
 
-            String raw = res.getBody();
+            String raw = HttpBodies.decode(res.getBody());
             UserInfoResponse body;
             try {
                 body = raw == null || raw.isBlank() ? null : MAPPER.readValue(raw.trim(), UserInfoResponse.class);
@@ -90,9 +91,7 @@ public class BotSubscriptionFetcher {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private static String snippet(String raw) {
-        if (raw == null) return "null";
-        String s = raw.replaceAll("\\s+", " ").trim();
-        return s.length() > 500 ? s.substring(0, 500) + "..." : s;
+        return HttpBodies.printable(raw, 500);
     }
 
     private static RestTemplate buildClient() {
