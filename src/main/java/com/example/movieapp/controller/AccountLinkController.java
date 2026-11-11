@@ -34,6 +34,11 @@ public class AccountLinkController {
         return telegramLoginService.checkLink(code, currentUser());
     }
 
+    @PostMapping("/account/telegram/sync")
+    public ResponseEntity<?> syncTelegram() {
+        return telegramLoginService.syncSubscriptions(currentUser());
+    }
+
     @PostMapping("/account/google/link")
     public ResponseEntity<?> linkGoogle(@RequestBody Map<String, String> body) {
         return googleLinkService.link(currentUser(), body.get("credential"), body.get("deviceId"));

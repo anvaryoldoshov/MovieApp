@@ -38,6 +38,9 @@ public class TelegramLoginService {
     private static final Pattern CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]{" + CODE_LENGTH + "}$");
     private static final Duration TTL = Duration.ofMinutes(10);
 
+    private static final Duration SYNC_INTERVAL = Duration.ofMinutes(1);
+
+    private final Map<Long, Instant> lastSync = new java.util.concurrent.ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
     private final TelegramLoginRepository telegramLoginRepository;
     private final UserRepo userRepo;
@@ -215,8 +218,26 @@ public class TelegramLoginService {
         return ResponseEntity.ok(response);
     }
 
+    public ResponseEntity<?> syncSubscriptions(User user) {
+        Long chatId = user.getTelegramChatId();
+        if (chatId == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("status", "NOT_LINKED"));
+        }
+        Instant now = Instant.now();
+        Instant last = lastSync.get(user.getId());
+        if (last != null && now.isBefore(last.plus(SYNC_INTERVAL))) {
+            return ResponseEntity.ok(Map.of("status", "THROTTLED", "added", 0));
+        }
+        lastSync.put(user.getId(), now);
+        int added = botSubscriptionFetcher.sync(chatId);
+        int applied = botPurchaseService.applyPendingForUser(user);
+        return ResponseEntity.ok(Map.of("status", "OK", "added", added, "applied", applied));
+    }
+
     @Scheduled(fixedDelay = 3_600_000)
     public void cleanup() {
+        Instant syncCutoff = Instant.now().minus(SYNC_INTERVAL);
+        lastSync.values().removeIf(t -> t.isBefore(syncCutoff));
         int removed = telegramLoginRepository.deleteExpiredBefore(Instant.now().minus(Duration.ofDays(1)));
         if (removed > 0) {
             log.info("Eskirgan telegram login kodlari o'chirildi: {}", removed);

@@ -83,7 +83,7 @@ public class BotPurchaseService {
             req.setSource(s.getSource());
             ResponseEntity<Map<String, Object>> res = ingest(req);
             if (res.getStatusCode().is2xxSuccessful()) {
-                saved++;
+                if (res.getBody() == null || !"DUPLICATE".equals(res.getBody().get("code"))) saved++;
             } else {
                 log.warn("Login obunasi qabul qilinmadi: chatId={}, series={}, body={}", chatId, s.getSeriesId(), res.getBody());
             }
