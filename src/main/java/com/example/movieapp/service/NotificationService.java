@@ -32,6 +32,7 @@ public class NotificationService {
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
     private static final int BATCH_SIZE = 500; // FCM multicast cheklovi
     private static final String DEFAULT_SOUND = "default";
+    private static final String ANDROID_APP_SOUND = "notification_sound";
 
     private final UserDeviceRepository userDeviceRepository;
     private final NotificationSoundRepository notificationSoundRepository;
@@ -199,7 +200,7 @@ public class NotificationService {
         return AndroidConfig.builder()
                 .setNotification(AndroidNotification.builder()
                         .setChannelId(androidChannelId)
-                        .setSound(sound)
+                        .setSound(DEFAULT_SOUND.equals(sound) ? ANDROID_APP_SOUND : sound)
                         .build())
                 .build();
     }
