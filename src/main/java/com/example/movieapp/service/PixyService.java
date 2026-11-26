@@ -38,7 +38,8 @@ public class PixyService {
         }
 
         String callbackUrl = callbackBaseUrl + "/api/payment/pixy/callback";
-        String note = "order-" + payment.getId();
+        String orderId = "order-" + payment.getId();
+        String note = payment.getUser() != null ? orderId + " u" + payment.getUser().getId() : orderId;
 
         Map<String, Object> body = new HashMap<>();
         body.put("amount", amountSom);
@@ -64,7 +65,7 @@ public class PixyService {
             String hash = (String) responseBody.get("hash");
 
             payment.setPixyHash(hash);
-            payment.setPixyOrderId(note);
+            payment.setPixyOrderId(orderId);
             paymentRepository.save(payment);
 
             log.info("Pixy payment yaratildi: orderId={}, hash={}", payment.getId(), hash);
