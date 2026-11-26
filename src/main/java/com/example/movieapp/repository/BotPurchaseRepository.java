@@ -14,6 +14,8 @@ public interface BotPurchaseRepository extends JpaRepository<BotPurchase, Long> 
 
     List<BotPurchase> findByTelegramIdAndStatusIn(Long telegramId, Collection<BotPurchaseStatus> statuses);
 
+    List<BotPurchase> findByTelegramIdAndUser_Id(Long telegramId, Long userId);
+
     List<BotPurchase> findByBotSeriesIdAndStatus(Long botSeriesId, BotPurchaseStatus status);
 
     List<BotPurchase> findTop200ByOrderByReceivedAtDesc();

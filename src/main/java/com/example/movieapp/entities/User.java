@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Getter
@@ -48,6 +49,9 @@ public class User {
 
     @Column(name = "telegram_username")
     private String telegramUsername;
+
+    @Column(name = "last_unlink_at")
+    private Instant lastUnlinkAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

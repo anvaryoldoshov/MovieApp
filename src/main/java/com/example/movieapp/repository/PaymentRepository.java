@@ -35,6 +35,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     boolean existsByUser_IdAndPromoCode_IdAndStatus(Long userId, Long promoCodeId, PaymentStatus status);
 
+    boolean existsByUser_IdAndSeries_IdAndStatus(Long userId, Long seriesId, PaymentStatus status);
+
     long countByPromoCode_IdAndStatus(Long promoCodeId, PaymentStatus status);
 
     long countByPromoCode_Id(Long promoCodeId);

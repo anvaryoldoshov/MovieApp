@@ -3,6 +3,7 @@ package com.example.movieapp.controller;
 import com.example.movieapp.entities.User;
 import com.example.movieapp.exception.UserNotFoundException;
 import com.example.movieapp.repository.UserRepo;
+import com.example.movieapp.service.AccountUnlinkService;
 import com.example.movieapp.service.GoogleLinkService;
 import com.example.movieapp.service.TelegramLoginService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class AccountLinkController {
 
     private final TelegramLoginService telegramLoginService;
     private final GoogleLinkService googleLinkService;
+    private final AccountUnlinkService accountUnlinkService;
     private final UserRepo userRepo;
 
     @PostMapping("/account/telegram/link/start")
@@ -42,6 +44,16 @@ public class AccountLinkController {
     @PostMapping("/account/google/link")
     public ResponseEntity<?> linkGoogle(@RequestBody Map<String, String> body) {
         return googleLinkService.link(currentUser(), body.get("credential"), body.get("deviceId"));
+    }
+
+    @PostMapping("/account/telegram/unlink")
+    public ResponseEntity<?> unlinkTelegram() {
+        return accountUnlinkService.unlinkTelegram(currentUser());
+    }
+
+    @PostMapping("/account/google/unlink")
+    public ResponseEntity<?> unlinkGoogle(@RequestBody Map<String, String> body) {
+        return accountUnlinkService.unlinkGoogle(currentUser(), body.get("deviceId"));
     }
 
     private User currentUser() {
