@@ -47,6 +47,8 @@ public class AccountUnlinkService {
         if (denied != null) return denied;
 
         Long chatId = me.getTelegramChatId();
+        LocalDate botUntil = activeBotUntil(me, chatId);
+        if (botUntil != null) return activeSubscription("TELEGRAM", botUntil);
         int revoked = revokeBotAccess(me, chatId);
 
         me.setTelegramChatId(null);
@@ -69,6 +71,9 @@ public class AccountUnlinkService {
         User me = userRepo.findById(current.getId()).orElseThrow();
         ResponseEntity<?> denied = checkBothLinked(me);
         if (denied != null) return denied;
+
+        LocalDate appUntil = activeAppUntil(me);
+        if (appUntil != null) return activeSubscription("GOOGLE", appUntil);
 
         String fakeEmail = "tg" + me.getTelegramChatId() + TelegramLoginService.FAKE_EMAIL_DOMAIN;
         User clash = userRepo.findByEmail(fakeEmail).orElse(null);
@@ -100,6 +105,37 @@ public class AccountUnlinkService {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(body);
         }
         return null;
+    }
+
+    private LocalDate activeBotUntil(User me, Long chatId) {
+        LocalDate today = LocalDate.now();
+        LocalDate max = null;
+        for (BotPurchase p : botPurchaseRepository.findByTelegramIdAndUser_Id(chatId, me.getId())) {
+            if (p.getStatus() != BotPurchaseStatus.APPLIED) continue;
+            LocalDate end = p.getAppliedEndDate() != null ? p.getAppliedEndDate() : p.getExpiresAt();
+            if (end == null || end.isBefore(today)) continue;
+            if (max == null || end.isAfter(max)) max = end;
+        }
+        return max;
+    }
+
+    private LocalDate activeAppUntil(User me) {
+        LocalDate max = null;
+        for (MovieAccess a : movieAccessRepository.findActiveAppPaidAccesses(me.getId())) {
+            LocalDate end = a.getAccessEndDate();
+            if (end == null) return LocalDate.MAX;
+            if (max == null || end.isAfter(max)) max = end;
+        }
+        return max;
+    }
+
+    private ResponseEntity<?> activeSubscription(String provider, LocalDate until) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", "ACTIVE_SUBSCRIPTION");
+        body.put("provider", provider);
+        body.put("message", "Faol obuna bor, uzib bo'lmaydi");
+        body.put("until", until.equals(LocalDate.MAX) ? null : until.toString());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     private int revokeBotAccess(User me, Long chatId) {

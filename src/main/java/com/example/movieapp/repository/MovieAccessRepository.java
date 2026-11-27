@@ -25,6 +25,12 @@ public interface MovieAccessRepository extends JpaRepository<MovieAccess, Long> 
 
     boolean existsByUserIdAndMovieId(Long userId, Long seriesId);
 
+    @Query("SELECT m FROM MovieAccess m WHERE m.user.id = :userId AND m.paid = true " +
+            "AND (m.accessEndDate IS NULL OR m.accessEndDate >= CURRENT_DATE) " +
+            "AND EXISTS (SELECT 1 FROM Payment p WHERE p.user.id = :userId AND p.series.id = m.movie.id " +
+            "AND p.status = com.example.movieapp.enums.PaymentStatus.PAID)")
+    List<MovieAccess> findActiveAppPaidAccesses(@Param("userId") Long userId);
+
     void deleteByMovie_Id(Long movieId);
 
     Collection<MovieAccess> findByUserIdAndPaidTrue(Long userId);
